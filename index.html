@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
   /* ==========================================================================
      Big Malang 2 — Modern Glass UI (visual layer) on top of the working logic
@@ -889,11 +890,138 @@
   [data-theme="dark"] button.danger { border-color: rgba(248,113,113,.4); }
   [data-theme="dark"] button.rejoin { border-color: rgba(52,211,153,.4); color: #6EE7B7; }
 
+  /* =========================================
+     ANALISIS PROGRES — CSS
+  ========================================= */
+  .compare-mode-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .cmp-tab { padding: 9px 18px; border-radius: 20px; border: 1px solid #CBD5E1; background: #fff; color: #475569; font-size: 13px; font-weight: 600; cursor: pointer; transition: all .18s; }
+  .cmp-tab:hover { border-color: var(--brand); color: #92400E; }
+  .cmp-tab.active { background: var(--brand); color: #fff; border-color: var(--brand); box-shadow: 0 4px 12px rgba(245,180,0,.25); }
+
+  .cmp-period-bar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; padding: 14px 18px; background: rgba(248,250,252,.8); border: 1px solid #E2E8F0; border-radius: 16px; }
+  .cmp-period-bar label { font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; margin-right: 4px; }
+  .cmp-period-btn { padding: 7px 14px; border-radius: 14px; border: 1px solid #CBD5E1; background: #fff; color: #475569; font-size: 12.5px; font-weight: 600; cursor: pointer; transition: all .18s; }
+  .cmp-period-btn:hover { border-color: var(--brand); }
+  .cmp-period-btn.active { background: var(--text-main); color: #fff; border-color: var(--text-main); }
+  .cmp-period-bar select { font-size: 12.5px; padding: 7px 10px; }
+
+  .cmp-filter-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 18px; }
+  .cmp-filter-row .filter-field { min-width: 160px; flex: 1; }
+
+  .cmp-kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+  @media(max-width:900px) { .cmp-kpi-row { grid-template-columns: 1fr 1fr; } }
+  .cmp-kpi { background: rgba(255,255,255,.85); border: 1px solid #E2E8F0; border-radius: 18px; padding: 16px 18px; }
+  .cmp-kpi .ck { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+  .cmp-kpi .cv { font-family: 'JetBrains Mono', monospace; font-size: 22px; font-weight: 700; margin: 6px 0 2px; color: var(--text-main); }
+  .cmp-kpi .cd { font-size: 12px; font-weight: 700; }
+  .cmp-kpi .cd.up { color: #059669; } .cmp-kpi .cd.down { color: #DC2626; } .cmp-kpi .cd.neu { color: var(--text-muted); }
+
+  .cmp-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); margin: 20px 0 10px; display: flex; align-items: center; gap: 8px; }
+  .cmp-section-title::after { content:''; flex:1; height:1px; background: rgba(226,232,240,.6); }
+
+  /* Chart SVG wrapper */
+  .cmp-chart-wrap { background: rgba(248,250,252,.6); border: 1px solid #E2E8F0; border-radius: 16px; padding: 16px; margin-bottom: 18px; overflow-x: auto; }
+  .cmp-chart-wrap svg { display: block; width: 100%; }
+  .cmp-chart-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: 12px; color: var(--text-muted); }
+  .cmp-chart-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .cmp-chart-legend i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  /* ERO vs ERO table */
+  .cmp-table-wrap { overflow-x: auto; border: 1px solid #E2E8F0; border-radius: 14px; }
+  .cmp-table { width: 100%; min-width: 700px; border-collapse: collapse; font-size: 13px; }
+  .cmp-table thead tr { background: rgba(248,250,252,.9); }
+  .cmp-table th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); border-bottom: 1px solid #E2E8F0; white-space: nowrap; }
+  .cmp-table td { padding: 10px 14px; border-bottom: 1px dashed #F1F5F9; vertical-align: middle; }
+  .cmp-table tbody tr:last-child td { border-bottom: none; }
+  .cmp-table tbody tr:hover { background: rgba(245,180,0,.04); }
+  .cmp-name-cell { font-weight: 700; font-size: 13.5px; }
+  .cmp-store-tag { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-top: 2px; }
+  .cmp-delta { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; }
+  .cmp-delta.up { color: #059669; } .cmp-delta.down { color: #DC2626; } .cmp-delta.neu { color: var(--text-muted); }
+  .cmp-trend-mini { display: inline-flex; align-items: center; gap: 4px; }
+  .cmp-rank-badge { display: inline-block; font-family: 'JetBrains Mono', monospace; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 20px; background: var(--brand-light); color: #92400E; }
+
+  /* Store vs Store */
+  .store-pair-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .store-pair-card { background: rgba(255,255,255,.85); border: 1px solid #E2E8F0; border-radius: 18px; padding: 18px; }
+  .store-pair-card .sp-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+  .store-pair-card .sp-sub { font-size: 11.5px; color: var(--text-muted); margin-bottom: 12px; }
+  .sp-bar-wrap { display: flex; gap: 10px; align-items: center; margin-bottom: 6px; }
+  .sp-bar-label { font-size: 11px; color: var(--text-muted); font-weight: 600; width: 70px; flex-shrink: 0; }
+  .sp-bar { flex: 1; height: 8px; background: #E2E8F0; border-radius: 20px; overflow: hidden; }
+  .sp-bar span { display: block; height: 100%; border-radius: 20px; }
+  .sp-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; width: 38px; text-align: right; flex-shrink: 0; }
+
+  .cmp-empty { text-align: center; padding: 40px 20px; color: var(--text-muted); font-size: 14px; }
+  .cmp-empty i { font-size: 32px; display: block; margin-bottom: 10px; opacity: .4; }
+
+  /* Period-vs-period twin bars */
+  .cmp-pair-row { margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px dashed #E2E8F0; }
+  .cmp-pair-row:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .cmp-pair-name { font-size: 13.5px; font-weight: 700; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .cmp-pair-bars { display: flex; flex-direction: column; gap: 6px; }
+  .cmp-pair-bar-line { display: flex; align-items: center; gap: 8px; }
+  .cmp-pair-bar-tag { font-size: 10.5px; font-weight: 700; width: 60px; flex-shrink: 0; color: var(--text-muted); text-transform: uppercase; letter-spacing: .03em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cmp-pair-bar-track { flex: 1; height: 10px; background: #E2E8F0; border-radius: 20px; overflow: hidden; }
+  .cmp-pair-bar-fill { height: 100%; border-radius: 20px; transition: width .3s ease; }
+  .cmp-pair-bar-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; width: 42px; text-align: right; flex-shrink: 0; }
+  [data-theme="dark"] .cmp-pair-row { border-color: rgba(255,255,255,.08); }
+  [data-theme="dark"] .cmp-pair-bar-track { background: rgba(255,255,255,.1); }
+
+  [data-theme="dark"] .cmp-tab,
+  [data-theme="dark"] .cmp-period-btn { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.1); color: var(--text-muted); }
+  [data-theme="dark"] .cmp-tab.active { background: var(--brand); color: #fff; }
+  [data-theme="dark"] .cmp-period-btn.active { background: #F8FAFC; color: #0F172A; }
+  [data-theme="dark"] .cmp-kpi,
+  [data-theme="dark"] .store-pair-card { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.08); }
+  [data-theme="dark"] .cmp-chart-wrap { background: rgba(255,255,255,.03); border-color: rgba(255,255,255,.08); }
+  [data-theme="dark"] .cmp-period-bar { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+  [data-theme="dark"] .cmp-table thead tr { background: rgba(255,255,255,.04); }
+  [data-theme="dark"] .cmp-table td { border-color: rgba(255,255,255,.06); }
+  [data-theme="dark"] .cmp-rank-badge { background: rgba(245,180,0,.15); color: var(--brand); }
+
   /* Tombol ganti tema: ikon inline SVG, tidak lagi bergantung font-icon eksternal */
   #themeToggle .theme-icon { display: block; }
   #themeToggle svg#themeIconSun { display: none; }
   [data-theme="dark"] #themeToggle svg#themeIconMoon { display: none; }
   [data-theme="dark"] #themeToggle svg#themeIconSun { display: block; }
+
+  /* ============ Fitur tambahan: reminder snapshot, target store, export gambar ============ */
+  .nav-item { position: relative; }
+  .snapshot-nav-badge {
+    position: absolute; top: 6px; right: 8px; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--danger); box-shadow: 0 0 0 2px rgba(255,255,255,0.9); animation: snapPulse 1.8s infinite;
+  }
+  @media(max-width: 900px) { .snapshot-nav-badge { top: 2px; right: 14px; } }
+  @keyframes snapPulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  .snapshot-reminder-banner {
+    display: flex; align-items: center; gap: 10px; background: var(--danger-light); color: var(--danger);
+    border: 1px solid #FCA5A5; padding: 12px 16px; border-radius: 14px; font-weight: 600; font-size: 13px; margin-bottom: 16px;
+  }
+  .snapshot-reminder-banner i { font-size: 18px; flex-shrink: 0; }
+  .panel-head-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  .panel-head-row h2 { margin: 0; padding: 0; }
+  .btn-export-img { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 12.5px; padding: 9px 14px; }
+
+.store-month-filter{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft,rgba(148,163,184,.06));}
+.store-month-filter label{font-size:12px;font-weight:700;color:var(--text-muted);display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.store-month-filter select{min-width:210px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);padding:8px 10px;font:inherit;font-size:13px;outline:none;}
+@media(max-width:640px){.store-month-filter{align-items:stretch;flex-direction:column;}.store-month-filter select{width:100%;}}
+
+  .export-share-btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--border);background:var(--card);color:var(--text);padding:9px 12px;border-radius:10px;font:600 12px Inter,sans-serif;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.05);white-space:nowrap;}
+  .export-share-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.08);}
+  #storePerformanceCapture{position:fixed;left:-100000px;top:0;width:1200px;background:#fff;color:#111827;padding:34px;box-sizing:border-box;font-family:Inter,sans-serif;z-index:-1;}
+  #storePerformanceCapture .capture-title{font-size:28px;font-weight:800;margin:0 0 5px;}
+  #storePerformanceCapture .capture-sub{font-size:13px;color:#6b7280;margin-bottom:22px;}
+  #storePerformanceCapture table{width:100%;border-collapse:collapse;font-size:13px;}
+  #storePerformanceCapture th{background:#f3f4f6;text-align:left;padding:10px 9px;border-bottom:2px solid #d1d5db;font-weight:700;}
+  #storePerformanceCapture td{padding:8px 9px;border-bottom:1px solid #e5e7eb;vertical-align:middle;}
+  #storePerformanceCapture tr:nth-child(even) td{background:#fafafa;}
+  #storePerformanceCapture .rank{text-align:center;width:55px;font-weight:800;}
+  #storePerformanceCapture .score{text-align:center;font-weight:800;width:75px;}
+  #storePerformanceCapture .points{font-family:JetBrains Mono,monospace;font-size:11px;color:#374151;}
+  #storePerformanceCapture .grade{font-weight:700;}
+  #storePerformanceCapture .capture-footer{margin-top:18px;padding-top:12px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;display:flex;justify-content:space-between;gap:15px;}
 </style>
 </head>
 <body class="gated">
@@ -920,8 +1048,9 @@
       <button class="nav-item" data-view="eros" onclick="switchView('eros')" title="Data ERO"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.3 20c0-3.3 2.5-5.7 5.7-5.7s5.7 2.4 5.7 5.7"/><circle cx="17.2" cy="8.6" r="2.3"/><path d="M15.7 14.4c2.3.4 4 2.3 4 4.7"/></svg><span class="nav-label">Data ERO</span></button>
       <button class="nav-item" data-view="stores" onclick="switchView('stores')" title="Data Toko"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l1.2-4.5h13.6L20 9.5"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.3 20v-5.3h5.4V20"/><path d="M4 9.5h16"/></svg><span class="nav-label">Data Toko</span></button>
       <button class="nav-item" data-view="reports" onclick="switchView('reports')" title="Report"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="1.5"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg><span class="nav-label">Report</span></button>
-      <button class="nav-item" data-view="monthly" onclick="switchView('monthly')" title="Perbandingan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20.5" x2="20" y2="20.5"/><rect x="6" y="10.5" width="3.6" height="9.5"/><rect x="14.4" y="5.5" width="3.6" height="14.5"/></svg><span class="nav-label">Perbandingan</span></button>
-      <button class="nav-item" data-view="settings" id="navSettings" style="display:none;" onclick="switchView('settings')" title="Kelola Data"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg><span class="nav-label">Kelola Data</span></button>
+      <button class="nav-item" data-view="compare" onclick="switchView('compare')" title="Analisis Progres"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-5"/></svg><span class="nav-label">Analisis</span></button>
+      <button class="nav-item" data-view="monthly" onclick="switchView('monthly')" title="Arsip Bulanan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20.5" x2="20" y2="20.5"/><rect x="6" y="10.5" width="3.6" height="9.5"/><rect x="14.4" y="5.5" width="3.6" height="14.5"/></svg><span class="nav-label">Arsip</span></button>
+      <button class="nav-item" data-view="settings" id="navSettings" style="display:none;" onclick="switchView('settings')" title="Kelola Data"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg><span class="nav-label">Kelola Data</span><span id="snapshotNavBadge" class="snapshot-nav-badge" style="display:none;" title="Snapshot hari ini belum disimpan"></span></button>
     </nav>
     <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Ciutkan menu">
       <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6l-6 6 6 6"/><path d="M17 6l-6 6 6 6"/></svg><span class="nav-label">Ciutkan</span>
@@ -1014,6 +1143,63 @@
   </div>
   <!-- /DASHBOARD VIEW -->
 
+  <!-- ANALISIS PROGRES VIEW (NEW) -->
+  <div class="view-section" data-view-section="compare">
+    <div class="panel">
+      <h2><i class="ti ti-chart-arrows-vertical"></i>Analisis Progres</h2>
+
+      <!-- Mode tabs -->
+      <div class="compare-mode-tabs">
+        <button class="cmp-tab active" data-cmp-mode="store-time" onclick="setCmpMode('store-time')"><i class="ti ti-building-store"></i> Store dari Waktu ke Waktu</button>
+        <button class="cmp-tab" data-cmp-mode="ero-time" onclick="setCmpMode('ero-time')"><i class="ti ti-user-check"></i> ERO dari Waktu ke Waktu</button>
+        <button class="cmp-tab" data-cmp-mode="ero-store" onclick="setCmpMode('ero-store')"><i class="ti ti-arrows-left-right"></i> Perbandingan ERO dalam Store</button>
+      </div>
+
+      <!-- View type: Tren (chart bergerak) vs Bandingkan 2 Periode (point-in-time) -->
+      <div class="compare-mode-tabs" style="margin-top:-4px;">
+        <button class="cmp-tab active" data-cmp-viewtype="trend" onclick="setCmpViewType('trend')"><i class="ti ti-chart-line"></i> Tren</button>
+        <button class="cmp-tab" data-cmp-viewtype="period" onclick="setCmpViewType('period')"><i class="ti ti-calendar-stats"></i> Bandingkan 2 Periode</button>
+      </div>
+
+      <!-- Shared store filter -->
+      <div class="cmp-period-bar">
+        <label>Filter Store</label>
+        <select id="cmpStoreFilter" onchange="renderCompareView()"><option value="">Semua Store</option></select>
+      </div>
+
+      <!-- TREN controls -->
+      <div class="cmp-period-bar" id="cmpTrendControls">
+        <label>Periode:</label>
+        <button class="cmp-period-btn" data-period="7" onclick="setCmpPeriod(7)">7 Hari</button>
+        <button class="cmp-period-btn active" data-period="30" onclick="setCmpPeriod(30)">30 Hari</button>
+        <button class="cmp-period-btn" data-period="90" onclick="setCmpPeriod(90)">3 Bulan</button>
+        <button class="cmp-period-btn" data-period="0" onclick="setCmpPeriod(0)">Semua</button>
+      </div>
+
+      <!-- BANDINGKAN 2 PERIODE controls -->
+      <div class="cmp-period-bar" id="cmpPeriodControls" style="display:none;">
+        <label>Preset:</label>
+        <button class="cmp-period-btn active" data-preset="week" onclick="setCmpPreset('week')">Minggu Ini vs Minggu Lalu</button>
+        <button class="cmp-period-btn" data-preset="month" onclick="setCmpPreset('month')">Bulan Ini vs Bulan Lalu</button>
+        <button class="cmp-period-btn" data-preset="custom" onclick="setCmpPreset('custom')">Custom Tanggal (Daily)</button>
+      </div>
+      <div class="cmp-period-bar" id="cmpCustomDateRow" style="display:none;">
+        <div class="filter-field" style="min-width:140px;"><label>Periode B — Dari</label><input type="date" id="cmpBFrom" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode B — Sampai</label><input type="date" id="cmpBTo" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode A — Dari</label><input type="date" id="cmpAFrom" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode A — Sampai</label><input type="date" id="cmpATo" onchange="renderCompareView()"></div>
+      </div>
+      <div class="sub" id="cmpCustomHint" style="display:none; color:var(--text-muted); font-size:12px; margin:-6px 0 16px;">Tip: isi Dari = Sampai dengan tanggal yang sama pada kedua periode untuk perbandingan harian (misal hari ini vs kemarin).</div>
+
+      <!-- KPI row -->
+      <div id="cmpKpiRow" class="cmp-kpi-row"></div>
+
+      <!-- Dynamic content area -->
+      <div id="cmpContent"></div>
+    </div>
+  </div>
+  <!-- /ANALISIS PROGRES VIEW -->
+
   <!-- MONTHLY COMPARISON VIEW -->
   <div class="view-section" data-view-section="monthly">
     <div class="panel">
@@ -1033,6 +1219,7 @@
   <div class="view-section" data-view-section="settings">
       <div class="panel" id="adminPanel" style="display:none;">
         <h2><i class="ti ti-upload"></i>Update Data & Arsip Bulanan</h2>
+        <div id="snapshotReminderBanner" class="snapshot-reminder-banner" style="display:none;"><i class="ti ti-alert-triangle"></i><span>Snapshot hari ini belum disimpan! Semua fitur tren &amp; perbandingan bergantung pada snapshot harian — klik "Simpan snapshot hari ini" di bawah sebelum mengakhiri hari.</span></div>
         <div class="archive-note"><b>Alur baru:</b> pilih <b>Data Berjalan</b> untuk mengganti dashboard aktif. Pilih <b>Arsip Bulan Sebelumnya</b> untuk menyimpan data bulan lalu tanpa mengganggu ranking bulan berjalan.</div>
         <div class="upload-mode">
           <div class="mode-choice"><input type="radio" id="uploadCurrent" name="uploadMode" value="current" checked onchange="updateUploadModeUI()"><label for="uploadCurrent"><i class="ti ti-refresh"></i>Data Berjalan</label></div>
@@ -1121,19 +1308,25 @@
   <!-- STORES VIEW -->
   <div class="view-section" data-view-section="stores">
       <div class="panel">
-        <h2><i class="ti ti-building-store"></i>Store Performance Score</h2>
-        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Skor store dihitung dari rata-rata poin saat ini (maksimum 10 = 100). Klik salah satu toko untuk melihat daftar ERO dan poinnya.</div>
+        <div class="panel-head-row" style="margin-bottom:10px;">
+          <h2><i class="ti ti-building-store"></i>Store Performance Score</h2>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+            <div id="storePerformanceMonthFilter" class="store-month-filter store-performance-filter"></div>
+            <button type="button" class="export-share-btn" onclick="exportStorePerformanceImage()"><i class="ti ti-camera"></i> Export / Share Analisis</button>
+          </div>
+        </div>
+        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Skor store dihitung dari rata-rata poin ERO aktif pada bulan yang dipilih (maksimum 10 = 100). Pilih bulan untuk melihat performa seluruh toko pada periode tersebut.</div>
         <div id="storeScoreGrid" class="score-grid"></div>
       </div>
 
       <div class="panel">
         <h2><i class="ti ti-building-store"></i>Ringkasan per Store</h2>
-        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Diurutkan dari rata-rata poin terendah — toko yang paling perlu dibantu tampil paling atas. Klik nama toko untuk detail ERO.</div>
+        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Diurutkan dari rata-rata poin terendah — toko yang paling perlu dibantu tampil paling atas. Target Store = akumulasi target seluruh ERO aktif di store. Klik nama toko untuk melihat detail target, pencapaian, dan ERO.</div>
         <div class="table-scroll" style="max-height: 450px;">
           <table id="storeTable">
             <thead>
               <tr>
-                <th class="name">Store</th><th>ERO</th><th>Rata-rata</th><th>Perfect</th><th>Good</th><th>Need Improve</th><th>Bad</th><th>Poor</th>
+                <th class="name">Store</th><th>ERO</th><th>Rata-rata</th><th>Target Store</th><th>Pencapaian Store</th><th>Perfect</th><th>Good</th><th>Need Improve</th><th>Bad</th><th>Poor</th>
               </tr>
             </thead>
             <tbody id="storeTableBody"></tbody>
@@ -1193,6 +1386,8 @@
       </div>
       <button class="modal-close" onclick="closeStoreModal()"><i class="ti ti-x"></i></button>
     </div>
+    <div id="storeModalMonthFilter" class="store-month-filter"></div>
+    <div id="storeModalTargetProgress"></div>
     <div id="storeModalList"></div>
   </div>
 </div>
@@ -1288,13 +1483,14 @@ function isAdminFromUser(user){
   return !!user && ADMIN_EMAILS.includes((user.email||'').toLowerCase());
 }
 function syncMessage(msg,ok=true){const el=document.getElementById('syncStatus');if(!el)return;el.textContent=msg||'';el.className='upload-status '+(ok?'ok':'err');}
-function updateAdminUI(){document.getElementById('adminPanel').style.display=isAdmin?'block':'none';document.getElementById('adminBtnLabel').textContent=isAdmin?'Logout':'Login Admin';const badge=document.getElementById('modeBadge');badge.textContent=isAdmin?'Mode admin':'Mode lihat saja';badge.className='mode-badge '+(isAdmin?'admin':'view');const navSettings=document.getElementById('navSettings');if(navSettings){navSettings.style.display=isAdmin?'flex':'none';if(!isAdmin&&currentView==='settings')switchView('dashboard');}}
+function updateAdminUI(){document.getElementById('adminPanel').style.display=isAdmin?'block':'none';document.getElementById('adminBtnLabel').textContent=isAdmin?'Logout':'Login Admin';const badge=document.getElementById('modeBadge');badge.textContent=isAdmin?'Mode admin':'Mode lihat saja';badge.className='mode-badge '+(isAdmin?'admin':'view');const navSettings=document.getElementById('navSettings');if(navSettings){navSettings.style.display=isAdmin?'flex':'none';if(!isAdmin&&currentView==='settings')switchView('dashboard');}updateSnapshotReminder();}
 let currentView='dashboard';
 function switchView(view){
   currentView=view;
   document.querySelectorAll('.nav-item').forEach(btn=>btn.classList.toggle('active',btn.dataset.view===view));
   document.querySelectorAll('.view-section').forEach(sec=>sec.classList.toggle('active',sec.dataset.viewSection===view));
   window.scrollTo({top:0,behavior:'instant'});
+  if(view==='compare') renderCompareView();
 }
 async function loadAdminState(){
   if(!SUPABASE_READY){isAdmin=false;updateAdminUI();syncMessage('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan SUPABASE_ANON_KEY di index.html.',false);return;}
@@ -1577,11 +1773,20 @@ function render(){
     watch.innerHTML=bottom3.map(r=>{const g=calcGrade(r.total);return `<div class="watch-row"><div class="watch-left"><i class="ti ti-alert-triangle"></i><div><div class="watch-name">${escapeHtml(r.name)}</div><div class="watch-store">${escapeHtml(r.store||'')}</div><div class="watch-grade">${g}</div></div></div><div class="watch-pt">${r.total.toFixed(2)}</div></div>`;}).join('');
   }
 
+  renderStorePerformanceMonthFilter();
+  const storePerformanceRows=getStorePerformanceRows();
+  const storeActiveRows=storePerformanceRows.filter(isActive).map(r=>({...r,total:Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r)}));
   const storeMap={};
-  activeRows.forEach(r=>{const s=r.store||'(Tanpa Store)';if(!storeMap[s])storeMap[s]={count:0,sum:0,Perfect:0,Good:0,['Need Improve']:0,Bad:0,Poor:0};storeMap[s].count++;storeMap[s].sum+=r.total;storeMap[s][calcGrade(r.total)]++;});
+  storeActiveRows.forEach(r=>{const s=r.store||'(Tanpa Store)';if(!storeMap[s])storeMap[s]={count:0,sum:0,Perfect:0,Good:0,['Need Improve']:0,Bad:0,Poor:0};storeMap[s].count++;storeMap[s].sum+=r.total;storeMap[s][calcGrade(r.total)]++;});
   const storeRows=Object.keys(storeMap).map(s=>({store:s,count:storeMap[s].count,avg:storeMap[s].sum/storeMap[s].count,...storeMap[s]})).sort((a,b)=>a.avg-b.avg);
   const storeTbody=document.getElementById('storeTableBody');
-  if(storeTbody)storeTbody.innerHTML=storeRows.length?storeRows.map((s,i)=>`<tr class="${i===0?'store-worst':''}"><td class="name clickable-name" data-store="${escapeAttr(s.store)}" onclick="openStoreModal(this.dataset.store)">${escapeHtml(s.store)}</td><td data-label="ERO">${s.count}</td><td data-label="Rata-rata"><b>${s.avg.toFixed(2)}</b></td><td data-label="Perfect">${s.Perfect}</td><td data-label="Good">${s.Good}</td><td data-label="Need Improve">${s['Need Improve']}</td><td data-label="Bad">${s.Bad}</td><td data-label="Poor">${s.Poor}</td></tr>`).join(''):'<tr><td colspan="8" class="empty">Belum ada data.</td></tr>';
+  if(storeTbody)storeTbody.innerHTML=storeRows.length?storeRows.map((s,i)=>{
+    const agg=computeStoreTargetAgg(s.store,storePerformanceRows);
+    const targetText=agg.count?fmtTarget(agg.targetSum):'-';
+    const achDisplay={deviceVal:agg.achSum.device,accVal:agg.achSum.acc,operator:agg.achSum.operator,boltechVal:agg.achSum.boltech,arAcc:agg.achSum.arAcc,arBoltech:agg.achSum.arBoltech};
+    const achText=agg.count?fmtAchievement(achDisplay):'-';
+    return `<tr class="${i===0?'store-worst':''}"><td class="name clickable-name" data-store="${escapeAttr(s.store)}" onclick="openStoreModal(this.dataset.store)">${escapeHtml(s.store)}</td><td data-label="ERO">${s.count}</td><td data-label="Rata-rata"><b>${s.avg.toFixed(2)}</b></td><td class="target-ach-cell" data-label="Target Store">${escapeHtml(targetText)}</td><td class="target-ach-cell" data-label="Pencapaian Store">${escapeHtml(achText)}</td><td data-label="Perfect">${s.Perfect}</td><td data-label="Good">${s.Good}</td><td data-label="Need Improve">${s['Need Improve']}</td><td data-label="Bad">${s.Bad}</td><td data-label="Poor">${s.Poor}</td></tr>`;
+  }).join(''):'<tr><td colspan="10" class="empty">Belum ada data.</td></tr>';
 
   const tbody=document.getElementById('tableBody');
   const ranked=sorted.map((r,i)=>({...r,rank:i+1}));
@@ -1683,6 +1888,47 @@ function buildTargetProgressHtml(r){
   return `<div class="target-progress-wrap"><div class="target-progress-title"><i class="ti ti-target-arrow"></i>Target vs Pencapaian (% dari target)</div>${rowsHtml}</div>`;
 }
 
+/* ============ Target & pencapaian bulanan level Store ============
+   Target store = total (jumlah) target dari seluruh ERO aktif di store tersebut.
+   Pencapaian store = total pencapaian dari seluruh ERO aktif di store tersebut.
+   Est% per indikator = total pencapaian / total target (setara rata-rata tertimbang). */
+const STORE_TARGET_ACH_MAP = {device:'deviceVal', acc:'accVal', operator:'operator', boltech:'boltechVal', arAcc:'arAcc', arBoltech:'arBoltech'};
+function computeStoreTargetAgg(storeName, sourceRows=rows){
+  const members = sourceRows.filter(r=>isActive(r) && (r.store||'(Tanpa Store)')===storeName);
+  const targetSum = {}, achSum = {};
+  fields.forEach(f=>{ targetSum[f]=0; achSum[f]=0; });
+  members.forEach(r=>{
+    const t=r.target||{}, a=r.ach||{};
+    fields.forEach(f=>{
+      targetSum[f]+=Number(t[f])||0;
+      achSum[f]+=Number(a[STORE_TARGET_ACH_MAP[f]])||0;
+    });
+  });
+  const est={};
+  fields.forEach(f=>{ est[f] = targetSum[f]>0 ? achSum[f]/targetSum[f] : null; });
+  return {targetSum, achSum, est, count:members.length};
+}
+function buildStoreTargetProgressHtml(storeName, sourceRows=rows, monthLabelText=''){
+  const agg = computeStoreTargetAgg(storeName, sourceRows);
+  if(!agg.count) return '';
+  const labels={device:'Device',acc:'Acc',operator:'Operator',boltech:'Boltech',arAcc:'AR Acc',arBoltech:'AR Boltech'};
+  const rowsHtml = fields.map(f=>{
+    const ratio = agg.est[f];
+    const hasVal = ratio!==null && !isNaN(ratio) && isFinite(ratio);
+    const pct = hasVal ? ratio*100 : 0;
+    const clamped = Math.max(0, Math.min(100, pct));
+    const cls = pct>=100 ? 'ontrack' : pct>=80 ? 'warn' : 'behind';
+    return `<div class="target-progress-row">
+      <div class="target-progress-head"><span>${labels[f]}</span><b class="tp-${cls}">${hasVal?pct.toFixed(0)+'%':'-'}</b></div>
+      <div class="target-progress-track"><div class="target-progress-fill ${cls}" style="width:${clamped}%"></div></div>
+    </div>`;
+  }).join('');
+  const achDisplay = {deviceVal:agg.achSum.device, accVal:agg.achSum.acc, operator:agg.achSum.operator, boltechVal:agg.achSum.boltech, arAcc:agg.achSum.arAcc, arBoltech:agg.achSum.arBoltech};
+  return `<div class="target-progress-wrap"><div class="target-progress-title"><i class="ti ti-target-arrow"></i>Target &amp; Pencapaian Store${monthLabelText?` · ${escapeHtml(monthLabelText)}`:''} (total ${agg.count} ERO aktif)</div>${rowsHtml}
+    <div class="archive-note" style="margin-top:12px;"><b>Total Target Store:</b> ${escapeHtml(fmtTarget(agg.targetSum))}<br><b>Total Pencapaian Store:</b> ${escapeHtml(fmtAchievement(achDisplay))}</div>
+  </div>`;
+}
+
 function toggleSidebar(){
   const sidebar = document.getElementById('appSidebar');
   if(!sidebar) return;
@@ -1766,6 +2012,23 @@ function buildLineChartSvg(labels, series, opts={}){
 
 let historyData = [];
 
+function hasSnapshotToday(){
+  if(!historyData || !historyData.length) return false;
+  const today = new Date(); today.setHours(0,0,0,0);
+  return historyData.some(h=>{
+    const d = new Date(h.date); if(isNaN(d)) return false;
+    d.setHours(0,0,0,0);
+    return d.getTime() === today.getTime();
+  });
+}
+function updateSnapshotReminder(){
+  const due = isAdmin && !hasSnapshotToday();
+  const navBadge = document.getElementById('snapshotNavBadge');
+  if(navBadge) navBadge.style.display = due ? 'block' : 'none';
+  const banner = document.getElementById('snapshotReminderBanner');
+  if(banner) banner.style.display = due ? 'flex' : 'none';
+}
+
 function getFocusRecommendation(r){
   const labels={device:'Device',acc:'Acc',operator:'Operator',boltech:'Boltech',arAcc:'AR Acc',arBoltech:'AR Boltech'};
   const weights={device:3,acc:3,operator:1,boltech:1,arAcc:1,arBoltech:1};
@@ -1804,29 +2067,91 @@ function openPersonModal(name){
 }
 function closePersonModal(){ document.getElementById('personModal').style.display = 'none'; }
 
-function openStoreModal(storeName){
-  const members = lastWithTotals
-    .filter(r => (r.store || '(Tanpa Store)') === storeName)
-    .sort((a,b) => b.total - a.total);
-  const avg = members.length ? members.reduce((s,r)=>s+r.total,0)/members.length : 0;
-  document.getElementById('storeModalName').innerHTML = `<i class="ti ti-building-store"></i> ${escapeHtml(storeName)}`;
+let currentStoreModalName = '';
+let currentStoreModalMonth = 'current';
+let storePerformanceMonth = 'current';
+
+function getCurrentMonthKey(){
+  const d=new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+function getStoreMonthOptions(){
+  const options=[{key:'current',label:`Bulan berjalan (${monthLabel(getCurrentMonthKey())})`}];
+  const seen=new Set(['current']);
+  [...(historyData||[])].sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(h=>{
+    const key=archiveMonthFromSnapshot(h);
+    if(key && !seen.has(key)){
+      seen.add(key);
+      options.push({key,label:monthLabel(key)});
+    }
+  });
+  return options;
+}
+function getStoreRowsForMonth(monthKey){
+  if(monthKey==='current') return rows;
+  const snaps=(historyData||[]).filter(h=>archiveMonthFromSnapshot(h)===monthKey && Array.isArray(h.rows_snapshot));
+  if(!snaps.length) return [];
+  const latest=snaps.sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+  return latest.rows_snapshot.map(r=>({...r,active:r.active!==false,target:r.target||{},ach:r.ach||{},est:r.est||{}}));
+}
+function getStorePerformanceMonthOptions(){
+  return getStoreMonthOptions();
+}
+function renderStorePerformanceMonthFilter(){
+  const el=document.getElementById('storePerformanceMonthFilter');
+  if(!el)return;
+  const options=getStorePerformanceMonthOptions();
+  if(!options.some(o=>o.key===storePerformanceMonth))storePerformanceMonth='current';
+  el.innerHTML=`<label><i class="ti ti-calendar"></i> Bulan</label><select id="storePerformanceMonthSelect" onchange="changeStorePerformanceMonth(this.value)">${options.map(o=>`<option value="${escapeAttr(o.key)}" ${o.key===storePerformanceMonth?'selected':''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
+}
+function changeStorePerformanceMonth(monthKey){
+  storePerformanceMonth=monthKey||'current';
+  render();
+}
+function getStorePerformanceRows(){
+  return getStoreRowsForMonth(storePerformanceMonth);
+}
+
+function renderStoreModalForMonth(){
+  const storeName=currentStoreModalName;
+  const monthOptions=getStoreMonthOptions();
+  if(!monthOptions.some(o=>o.key===currentStoreModalMonth)) currentStoreModalMonth='current';
+  const sourceRows=getStoreRowsForMonth(currentStoreModalMonth);
+  const members=sourceRows.filter(r=>(r.store||'(Tanpa Store)')===storeName && isActive(r))
+    .map(r=>({...r,total:Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r)}))
+    .sort((a,b)=>b.total-a.total);
+  const avg=members.length?members.reduce((s,r)=>s+r.total,0)/members.length:0;
+  const monthText=monthOptions.find(o=>o.key===currentStoreModalMonth)?.label||'Bulan berjalan';
+  const filterEl=document.getElementById('storeModalMonthFilter');
+  if(filterEl){
+    filterEl.innerHTML=`<label><i class="ti ti-calendar"></i> Bulan data</label><select id="storeModalMonthSelect" onchange="changeStoreModalMonth(this.value)">${monthOptions.map(o=>`<option value="${escapeAttr(o.key)}" ${o.key===currentStoreModalMonth?'selected':''}>${escapeHtml(o.label)}</option>`).join('')}</select>`;
+  }
   document.getElementById('storeModalSub').textContent = members.length
-    ? `${members.length} ERO · Rata-rata poin ${avg.toFixed(2)}`
-    : 'Belum ada ERO tercatat untuk store ini.';
-  const list = document.getElementById('storeModalList');
+    ? `${members.length} ERO · Rata-rata poin ${avg.toFixed(2)} · ${monthText}`
+    : `Belum ada ERO tercatat untuk store ini pada ${monthText}.`;
+  const targetProgress=document.getElementById('storeModalTargetProgress');
+  if(targetProgress) targetProgress.innerHTML=buildStoreTargetProgressHtml(storeName,sourceRows,monthText);
+  const list=document.getElementById('storeModalList');
   if(!members.length){
-    list.innerHTML = '<div class="empty"><i class="ti ti-users"></i>Belum ada data ERO.</div>';
+    list.innerHTML='<div class="empty"><i class="ti ti-users"></i>Belum ada data ERO untuk bulan yang dipilih.</div>';
   } else {
-    list.innerHTML = members.map((r,i)=>{
-      const grade = calcGrade(r.total);
-      const gc = gradeClass(grade);
-      return `<div class="modal-list-item">
-        <span class="clickable-name" data-name="${escapeAttr(r.name)}" onclick="closeStoreModal();openPersonModal(this.dataset.name)">${i+1}. ${escapeHtml(r.name)}</span>
-        <span><span class="grade ${gc}" style="margin-right:10px;">${grade}</span><b>${r.total.toFixed(2)}</b></span>
-      </div>`;
+    list.innerHTML=members.map((r,i)=>{
+      const grade=calcGrade(r.total), gc=gradeClass(grade);
+      return `<div class="modal-list-item"><span class="clickable-name" data-name="${escapeAttr(r.name)}" onclick="closeStoreModal();openPersonModal(this.dataset.name)">${i+1}. ${escapeHtml(r.name)}</span><span><span class="grade ${gc}" style="margin-right:10px;">${grade}</span><b>${r.total.toFixed(2)}</b></span></div>`;
     }).join('');
   }
-  document.getElementById('storeModal').style.display = 'flex';
+}
+function changeStoreModalMonth(monthKey){
+  currentStoreModalMonth=monthKey||'current';
+  renderStoreModalForMonth();
+}
+function openStoreModal(storeName){
+  if(!storeName)return;
+  currentStoreModalName=storeName;
+  currentStoreModalMonth='current';
+  document.getElementById('storeModalName').innerHTML=`<i class="ti ti-building-store"></i> ${escapeHtml(storeName)}`;
+  renderStoreModalForMonth();
+  document.getElementById('storeModal').style.display='flex';
 }
 function closeStoreModal(){ document.getElementById('storeModal').style.display = 'none'; }
 
@@ -1923,6 +2248,65 @@ function renderYesterdayToday(){
   let improved=0,declined=0;Object.keys(curMap).forEach(n=>{if(prevMap[n]){if(curMap[n].rank<prevMap[n].rank)improved++;else if(curMap[n].rank>prevMap[n].rank)declined++;}});
   el.innerHTML=`<div class="insight-card"><h3>${escapeHtml(prev.label)}</h3><div class="big">${prev.avg.toFixed(2)}</div><div class="muted">Snapshot sebelumnya</div></div><div class="insight-card ${d>=0?'gain':'drop'}"><h3>${escapeHtml(cur.label)}</h3><div class="big">${cur.avg.toFixed(2)} ${d>=0?'▲':'▼'} ${Math.abs(d).toFixed(2)}</div><div class="muted">${d>=0?'+':''}${pct.toFixed(1)}% · ${improved} ERO naik rank · ${declined} turun rank</div></div>`;
 }
+async function exportStorePerformanceImage(){
+  const sourceRows = getStorePerformanceRows();
+  const active = sourceRows.filter(isActive)
+    .map(r=>({...r,total:Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r)}))
+    .sort((a,b)=>b.total-a.total || String(a.name||'').localeCompare(String(b.name||'')));
+  if(!active.length){ alert('Belum ada data ERO aktif untuk bulan yang dipilih.'); return; }
+
+  const options = getStorePerformanceMonthOptions();
+  const monthText = options.find(o=>o.key===storePerformanceMonth)?.label || 'Bulan berjalan';
+  const capture = document.getElementById('storePerformanceCapture') || (()=>{
+    const d=document.createElement('div'); d.id='storePerformanceCapture'; document.body.appendChild(d); return d;
+  })();
+  const generatedAt = new Date().toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+  const pointFields = [
+    ['Device','device'],['Acc','acc'],['Operator','operator'],['Boltech','boltech'],['AR Acc','arAcc'],['AR Boltech','arBoltech']
+  ];
+  const rowsHtml = active.map((r,i)=>{
+    const grade=calcGrade(r.total);
+    const points=pointFields.map(([label,f])=>`${label}: ${Number(r[f])||0}`).join(' · ');
+    return `<tr>
+      <td class="rank">${i+1}</td>
+      <td><b>${escapeHtml(r.name||'-')}</b></td>
+      <td>${escapeHtml(r.store||'(Tanpa Store)')}</td>
+      <td class="score">${r.total.toFixed(2)}</td>
+      <td class="grade">${escapeHtml(grade)}</td>
+      <td class="points">${escapeHtml(points)}</td>
+    </tr>`;
+  }).join('');
+  const avg=active.reduce((sum,r)=>sum+r.total,0)/active.length;
+  const goodPlus=active.filter(r=>['Perfect','Good'].includes(calcGrade(r.total))).length;
+  capture.innerHTML=`<div class="capture-title">Store Performance Score — Ranking ERO</div>
+    <div class="capture-sub">Periode: <b>${escapeHtml(monthText)}</b> · ${active.length} ERO aktif · Rata-rata: <b>${avg.toFixed(2)}</b> · Good+: <b>${(goodPlus/active.length*100).toFixed(0)}%</b></div>
+    <table><thead><tr><th class="rank">Rank</th><th>ERO</th><th>Store</th><th class="score">Score</th><th>Grade</th><th>Point per Category</th></tr></thead><tbody>${rowsHtml}</tbody></table>
+    <div class="capture-footer"><span>Export Analisis · ${escapeHtml(monthText)}</span><span>Dibuat ${escapeHtml(generatedAt)}</span></div>`;
+
+  // Pastikan browser sudah menghitung layout sebelum screenshot.
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const canvas = await html2canvas(capture,{backgroundColor:'#ffffff',scale:2,useCORS:true,logging:false,windowWidth:1200});
+  const filename = `Store-Performance-Ranking-${String(monthText).replace(/[^a-z0-9]+/gi,'-').replace(/^-|-$/g,'')}.png`;
+
+  const blob = await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
+  if(!blob){ alert('Gagal membuat gambar analisis. Silakan coba lagi.'); return; }
+  const file = new File([blob],filename,{type:'image/png'});
+
+  try{
+    if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({title:`Store Performance Score — ${monthText}`,text:`Ranking ERO · ${monthText}`,files:[file]});
+      return;
+    }
+  }catch(err){
+    if(err && err.name==='AbortError') return;
+  }
+
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  alert('Gambar ranking berhasil dibuat dan diunduh. Di HP, buka file PNG tersebut lalu pilih Share untuk mengirim ke WhatsApp/Telegram.');
+}
+
 function renderStoreScore(storeRows){
   const el=document.getElementById('storeScoreGrid'); if(!el)return; if(!storeRows.length){el.innerHTML='<div class="empty">Belum ada data store.</div>';return;}
   el.innerHTML=storeRows.map(s=>{const score=Math.max(0,Math.min(100,s.avg*10)); const goodPlus=(s.Perfect+s.Good)/s.count*100; return `<div class="score-card" data-store="${escapeAttr(s.store)}" onclick="openStoreModal(this.dataset.store)"><div class="score-head"><div class="score-name clickable-name">${escapeHtml(s.store)}</div><div class="score-value">${score.toFixed(0)}</div></div><div class="score-bar"><span style="width:${score}%"></span></div><div class="score-meta"><span>Avg ${s.avg.toFixed(2)}</span><span>Good+ ${goodPlus.toFixed(0)}%</span></div><div class="score-hint"><i class="ti ti-eye"></i>Lihat detail ERO</div></div>`;}).join('');
@@ -2005,10 +2389,10 @@ function renderHistory(history){
 }
 
 async function loadHistory(){
-  if(!SUPABASE_READY){historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));return;}
+  if(!SUPABASE_READY){historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();return;}
   const {data,error}=await sb.from('rank_history').select('*').order('date',{ascending:false}).limit(100);
-  if(error){console.error(error);historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));return;}
-  historyData=data||[];filteredHistoryData=getFilteredHistory();renderHistory(filteredHistoryData);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));
+  if(error){console.error(error);historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();return;}
+  historyData=data||[];filteredHistoryData=getFilteredHistory();renderHistory(filteredHistoryData);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -2032,6 +2416,528 @@ async function submitViewGate(){
   unlockView();
   bootApp();
 }
+// =========================================
+// ANALISIS PROGRES — LOGIKA BARU
+// =========================================
+let cmpMode = 'store-time';
+let cmpPeriod = 30;
+let cmpViewType = 'trend'; // 'trend' | 'period'
+let cmpPreset = 'week'; // 'week' | 'month' | 'custom'
+
+function setCmpMode(mode) {
+  cmpMode = mode;
+  document.querySelectorAll('[data-cmp-mode]').forEach(t => t.classList.toggle('active', t.dataset.cmpMode === mode));
+  renderCompareView();
+}
+
+function setCmpPeriod(days) {
+  cmpPeriod = days;
+  document.querySelectorAll('.cmp-period-btn[data-period]').forEach(b => b.classList.toggle('active', Number(b.dataset.period) === days));
+  renderCompareView();
+}
+
+function setCmpViewType(type) {
+  cmpViewType = type;
+  document.querySelectorAll('[data-cmp-viewtype]').forEach(b => b.classList.toggle('active', b.dataset.cmpViewtype === type));
+  const trendEl = document.getElementById('cmpTrendControls');
+  const periodEl = document.getElementById('cmpPeriodControls');
+  const customEl = document.getElementById('cmpCustomDateRow');
+  const hintEl = document.getElementById('cmpCustomHint');
+  if (trendEl) trendEl.style.display = type === 'trend' ? 'flex' : 'none';
+  if (periodEl) periodEl.style.display = type === 'period' ? 'flex' : 'none';
+  const showCustom = type === 'period' && cmpPreset === 'custom';
+  if (customEl) customEl.style.display = showCustom ? 'flex' : 'none';
+  if (hintEl) hintEl.style.display = showCustom ? 'block' : 'none';
+  renderCompareView();
+}
+
+function setCmpPreset(preset) {
+  cmpPreset = preset;
+  document.querySelectorAll('.cmp-period-btn[data-preset]').forEach(b => b.classList.toggle('active', b.dataset.preset === preset));
+  const customEl = document.getElementById('cmpCustomDateRow');
+  const hintEl = document.getElementById('cmpCustomHint');
+  const showCustom = preset === 'custom';
+  if (customEl) customEl.style.display = showCustom ? 'flex' : 'none';
+  if (hintEl) hintEl.style.display = showCustom ? 'block' : 'none';
+  if (preset === 'custom') {
+    const af = document.getElementById('cmpAFrom'), bf = document.getElementById('cmpBFrom');
+    if (af && bf && !af.value && !bf.value) {
+      const wa = getWeekRange(0), wb = getWeekRange(-1);
+      document.getElementById('cmpAFrom').value = toDateInput(wa.start);
+      document.getElementById('cmpATo').value = toDateInput(new Date());
+      document.getElementById('cmpBFrom').value = toDateInput(wb.start);
+      document.getElementById('cmpBTo').value = toDateInput(wb.end);
+    }
+  }
+  renderCompareView();
+}
+
+function toDateInput(d) { return d.toISOString().slice(0, 10); }
+
+function getWeekRange(offsetWeeks) {
+  const now = new Date();
+  const day = now.getDay();
+  const diffToMonday = (day === 0 ? -6 : 1 - day);
+  const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMonday + offsetWeeks * 7);
+  monday.setHours(0, 0, 0, 0);
+  const end = offsetWeeks === 0 ? new Date() : new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + 6, 23, 59, 59, 999);
+  return { start: monday, end };
+}
+function getMonthRange(offsetMonths) {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + offsetMonths, 1);
+  const end = offsetMonths === 0 ? new Date() : new Date(now.getFullYear(), now.getMonth() + offsetMonths + 1, 0, 23, 59, 59, 999);
+  return { start, end };
+}
+function getPeriodRanges() {
+  if (cmpPreset === 'week') return { a: getWeekRange(0), b: getWeekRange(-1), labelA: 'Minggu Ini', labelB: 'Minggu Lalu' };
+  if (cmpPreset === 'month') return { a: getMonthRange(0), b: getMonthRange(-1), labelA: 'Bulan Ini', labelB: 'Bulan Lalu' };
+  const af = document.getElementById('cmpAFrom')?.value, at = document.getElementById('cmpATo')?.value;
+  const bf = document.getElementById('cmpBFrom')?.value, bt = document.getElementById('cmpBTo')?.value;
+  const a = { start: af ? new Date(af + 'T00:00:00') : null, end: at ? new Date(at + 'T23:59:59') : null };
+  const b = { start: bf ? new Date(bf + 'T00:00:00') : null, end: bt ? new Date(bt + 'T23:59:59') : null };
+  return { a, b, labelA: (af && at) ? `${af}${af!==at?' – '+at:''}` : 'Periode A', labelB: (bf && bt) ? `${bf}${bf!==bt?' – '+bt:''}` : 'Periode B' };
+}
+function snapshotsInRange(start, end) {
+  if (!start || !end) return [];
+  return historyData.filter(h => { const d = new Date(h.date); return d >= start && d <= end; }).filter(h => h.rows_snapshot && h.rows_snapshot.length);
+}
+function periodOverallAvg(snaps, storeFilter) {
+  let sum = 0, cnt = 0;
+  snaps.forEach(s => (s.rows_snapshot || []).forEach(r => { if (storeFilter && r.store !== storeFilter) return; sum += Number(r.total || 0); cnt++; }));
+  return cnt ? sum / cnt : null;
+}
+function aggByStore(snaps, storeFilter) {
+  const sum = {}, cnt = {};
+  snaps.forEach(s => (s.rows_snapshot || []).forEach(r => {
+    if (storeFilter && r.store !== storeFilter) return;
+    const st = r.store || '(Tanpa Store)';
+    sum[st] = (sum[st] || 0) + Number(r.total || 0); cnt[st] = (cnt[st] || 0) + 1;
+  }));
+  const out = {}; Object.keys(sum).forEach(s => out[s] = sum[s] / cnt[s]);
+  return out;
+}
+function aggByEro(snaps, storeFilter) {
+  const sum = {}, cnt = {}, storeOf = {}, lastRank = {}, lastDate = {};
+  snaps.forEach(s => (s.rows_snapshot || []).forEach(r => {
+    if (storeFilter && r.store !== storeFilter) return;
+    sum[r.name] = (sum[r.name] || 0) + Number(r.total || 0); cnt[r.name] = (cnt[r.name] || 0) + 1;
+    storeOf[r.name] = r.store;
+    const d = new Date(s.date);
+    if (!lastDate[r.name] || d > lastDate[r.name]) { lastDate[r.name] = d; lastRank[r.name] = r.rank; }
+  }));
+  const out = {}; Object.keys(sum).forEach(n => out[n] = { avg: sum[n] / cnt[n], store: storeOf[n], rank: lastRank[n] });
+  return out;
+}
+
+function populateCmpStoreFilter() {
+  const sel = document.getElementById('cmpStoreFilter');
+  if (!sel) return;
+  const prev = sel.value;
+  const stores = [...new Set((lastWithTotals || []).map(r => r.store).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Semua Store</option>' + stores.map(s => `<option value="${escapeAttr(s)}">${escapeHtml(s)}</option>`).join('');
+  if (prev && [...sel.options].some(o => o.value === prev)) sel.value = prev;
+}
+
+function renderCompareView() {
+  populateCmpStoreFilter();
+  const storeFilter = document.getElementById('cmpStoreFilter')?.value || '';
+  const kpiEl = document.getElementById('cmpKpiRow');
+  const contentEl = document.getElementById('cmpContent');
+  if (!kpiEl || !contentEl) return;
+  if (cmpViewType === 'period') { renderPeriodCompare(storeFilter, kpiEl, contentEl); return; }
+  renderTrendCompare(storeFilter, kpiEl, contentEl);
+}
+
+function renderTrendCompare(storeFilter, kpiEl, contentEl) {
+  const snaps = getCmpSnapshots();
+  // Summary KPIs
+  if (snaps.length >= 2) {
+    const first = snaps[0], last = snaps[snaps.length - 1];
+    const dAvg = last.avg - first.avg;
+    const firstRows = storeFilter ? (first.rows_snapshot || []).filter(r => r.store === storeFilter) : (first.rows_snapshot || []);
+    const lastRows = storeFilter ? (last.rows_snapshot || []).filter(r => r.store === storeFilter) : (last.rows_snapshot || []);
+    const firstAvg = firstRows.length ? firstRows.reduce((s,r)=>s+Number(r.total||0),0)/firstRows.length : first.avg;
+    const lastAvg = lastRows.length ? lastRows.reduce((s,r)=>s+Number(r.total||0),0)/lastRows.length : last.avg;
+    const d2 = lastAvg - firstAvg;
+    const improved = lastRows.filter(r => { const prev = firstRows.find(p=>p.name===r.name); return prev && Number(r.total||0) > Number(prev.total||0); }).length;
+    const declined = lastRows.filter(r => { const prev = firstRows.find(p=>p.name===r.name); return prev && Number(r.total||0) < Number(prev.total||0); }).length;
+    const dClass = d2 > 0 ? 'up' : d2 < 0 ? 'down' : 'neu';
+    const dSign = d2 >= 0 ? '+' : '';
+    kpiEl.innerHTML = `
+      <div class="cmp-kpi"><div class="ck">Snapshot Dibandingkan</div><div class="cv">${snaps.length}</div><div class="cd neu">${first.label} → ${last.label}</div></div>
+      <div class="cmp-kpi"><div class="ck">Avg Awal Periode</div><div class="cv">${firstAvg.toFixed(2)}</div><div class="cd neu">${first.label}</div></div>
+      <div class="cmp-kpi"><div class="ck">Avg Akhir Periode</div><div class="cv">${lastAvg.toFixed(2)}</div><div class="cd ${dClass}">${dSign}${d2.toFixed(2)} dari awal</div></div>
+      <div class="cmp-kpi"><div class="ck">Naik / Turun</div><div class="cv">${improved} / ${declined}</div><div class="cd neu">ERO${storeFilter ? ' di '+storeFilter : ''}</div></div>`;
+  } else {
+    kpiEl.innerHTML = `<div class="cmp-kpi" style="grid-column:1/-1"><div class="cmp-empty"><i class="ti ti-database-off"></i>Butuh minimal 2 snapshot untuk analisis. Simpan snapshot dari menu Kelola Data.</div></div>`;
+    contentEl.innerHTML = '';
+    return;
+  }
+
+  if (cmpMode === 'store-time') renderCmpStoreTime(snaps, storeFilter, contentEl);
+  else if (cmpMode === 'ero-time') renderCmpEroTime(snaps, storeFilter, contentEl);
+  else if (cmpMode === 'ero-store') renderCmpEroStore(storeFilter, contentEl);
+}
+
+// ---- BANDINGKAN 2 PERIODE (minggu/bulan/custom, sampai granularitas harian) ----
+function renderPeriodCompare(storeFilter, kpiEl, contentEl) {
+  const { a, b, labelA, labelB } = getPeriodRanges();
+  const snapsA = snapshotsInRange(a.start, a.end);
+  const snapsB = snapshotsInRange(b.start, b.end);
+  if (!a.start || !a.end || !b.start || !b.end || !snapsA.length || !snapsB.length) {
+    kpiEl.innerHTML = `<div class="cmp-kpi" style="grid-column:1/-1"><div class="cmp-empty"><i class="ti ti-calendar-off"></i>Tidak ada snapshot yang cukup pada salah satu periode.<br>${escapeHtml(labelB)}: ${snapsB.length} snapshot &middot; ${escapeHtml(labelA)}: ${snapsA.length} snapshot.<br>Pastikan sudah ada snapshot tersimpan di rentang tanggal tersebut.</div></div>`;
+    contentEl.innerHTML = '';
+    return;
+  }
+  const avgA = periodOverallAvg(snapsA, storeFilter);
+  const avgB = periodOverallAvg(snapsB, storeFilter);
+  const d = (avgA !== null && avgB !== null) ? avgA - avgB : null;
+  const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+  kpiEl.innerHTML = `
+    <div class="cmp-kpi"><div class="ck">${escapeHtml(labelB)}</div><div class="cv">${avgB !== null ? avgB.toFixed(2) : '–'}</div><div class="cd neu">${snapsB.length} snapshot</div></div>
+    <div class="cmp-kpi"><div class="ck">${escapeHtml(labelA)}</div><div class="cv">${avgA !== null ? avgA.toFixed(2) : '–'}</div><div class="cd neu">${snapsA.length} snapshot</div></div>
+    <div class="cmp-kpi"><div class="ck">Perubahan</div><div class="cv">${d !== null ? (d>=0?'+':'')+d.toFixed(2) : '–'}</div><div class="cd ${dc}">${dc==='up'?'Membaik':dc==='down'?'Menurun':'Stabil'}</div></div>
+    <div class="cmp-kpi"><div class="ck">Cakupan</div><div class="cv" style="font-size:15px;">${storeFilter ? escapeHtml(storeFilter) : 'Semua Store'}</div><div class="cd neu">${cmpMode==='store-time'?'Fokus antar Store':'Fokus antar ERO'}</div></div>`;
+
+  if (cmpMode === 'store-time') renderPeriodCompareStore(snapsA, snapsB, labelA, labelB, storeFilter, contentEl);
+  else renderPeriodCompareEro(snapsA, snapsB, labelA, labelB, storeFilter, contentEl);
+}
+
+function renderPeriodCompareStore(snapsA, snapsB, labelA, labelB, storeFilter, el) {
+  const aggA = aggByStore(snapsA, storeFilter), aggB = aggByStore(snapsB, storeFilter);
+  const stores = [...new Set([...Object.keys(aggA), ...Object.keys(aggB)])].sort((s1, s2) => (aggA[s2] || 0) - (aggA[s1] || 0));
+  if (!stores.length) { el.innerHTML = '<div class="cmp-empty"><i class="ti ti-building-store"></i>Tidak ada data store pada kedua periode.</div>'; return; }
+  const maxVal = Math.max(...stores.map(s => Math.max(aggA[s] || 0, aggB[s] || 0)), 0.01);
+  const pairsHtml = stores.map(s => {
+    const vA = aggA[s], vB = aggB[s];
+    const d = (vA !== undefined && vB !== undefined) ? vA - vB : null;
+    const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+    return `<div class="cmp-pair-row">
+      <div class="cmp-pair-name"><span>${escapeHtml(s)}</span><span class="cmp-delta ${dc}">${d !== null ? (dc==='up'?'▲ ':dc==='down'?'▼ ':'')+(d>=0?'+':'')+d.toFixed(2) : '–'}</span></div>
+      <div class="cmp-pair-bars">
+        <div class="cmp-pair-bar-line"><span class="cmp-pair-bar-tag">${escapeHtml(labelB)}</span><div class="cmp-pair-bar-track"><div class="cmp-pair-bar-fill" style="width:${vB!==undefined?(vB/maxVal*100):0}%;background:#94A3B8"></div></div><span class="cmp-pair-bar-val">${vB!==undefined?vB.toFixed(2):'–'}</span></div>
+        <div class="cmp-pair-bar-line"><span class="cmp-pair-bar-tag">${escapeHtml(labelA)}</span><div class="cmp-pair-bar-track"><div class="cmp-pair-bar-fill" style="width:${vA!==undefined?(vA/maxVal*100):0}%;background:var(--brand)"></div></div><span class="cmp-pair-bar-val">${vA!==undefined?vA.toFixed(2):'–'}</span></div>
+      </div>
+    </div>`;
+  }).join('');
+  const tableRows = stores.map(s => {
+    const vA = aggA[s], vB = aggB[s];
+    const d = (vA !== undefined && vB !== undefined) ? vA - vB : null;
+    const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+    return `<tr><td><div class="cmp-name-cell">${escapeHtml(s)}</div></td><td>${vB!==undefined?vB.toFixed(2):'–'}</td><td><b style="color:var(--brand)">${vA!==undefined?vA.toFixed(2):'–'}</b></td><td><span class="cmp-delta ${dc}">${d!==null?(dc==='up'?'▲':dc==='down'?'▼':'')+(d>=0?'+':'')+d.toFixed(2):'–'}</span></td></tr>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="cmp-section-title"><i class="ti ti-chart-bar"></i>${escapeHtml(labelB)} vs ${escapeHtml(labelA)} per Store</div>
+    <div class="cmp-chart-wrap">${pairsHtml}</div>
+    <div class="cmp-section-title"><i class="ti ti-table"></i>Tabel Perbandingan</div>
+    <div class="cmp-table-wrap"><table class="cmp-table">
+      <thead><tr><th>Store</th><th>${escapeHtml(labelB)}</th><th>${escapeHtml(labelA)}</th><th>Delta</th></tr></thead>
+      <tbody>${tableRows}</tbody>
+    </table></div>`;
+}
+
+function renderPeriodCompareEro(snapsA, snapsB, labelA, labelB, storeFilter, el) {
+  const aggA = aggByEro(snapsA, storeFilter), aggB = aggByEro(snapsB, storeFilter);
+  const names = [...new Set([...Object.keys(aggA), ...Object.keys(aggB)])].sort((n1, n2) => (aggA[n2]?.avg || 0) - (aggA[n1]?.avg || 0));
+  if (!names.length) { el.innerHTML = '<div class="cmp-empty"><i class="ti ti-user-off"></i>Tidak ada data ERO pada kedua periode.</div>'; return; }
+  const rows = names.map(n => {
+    const vA = aggA[n], vB = aggB[n];
+    const d = (vA && vB) ? vA.avg - vB.avg : null;
+    const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+    const rankD = (vA && vB && vA.rank != null && vB.rank != null) ? vB.rank - vA.rank : null;
+    const rankHtml = rankD === null ? '–' : rankD > 0 ? `<span class="cmp-delta up">▲ ${rankD}</span>` : rankD < 0 ? `<span class="cmp-delta down">▼ ${Math.abs(rankD)}</span>` : '<span class="cmp-delta neu">–</span>';
+    const grade = vA ? calcGrade(vA.avg) : (vB ? calcGrade(vB.avg) : null);
+    return `<tr>
+      <td><div class="cmp-name-cell">${escapeHtml(n)}</div><div class="cmp-store-tag">${escapeHtml((vA&&vA.store)||(vB&&vB.store)||'')}</div></td>
+      <td>${vB?vB.avg.toFixed(2):'–'}</td>
+      <td><b style="color:var(--brand)">${vA?vA.avg.toFixed(2):'–'}</b></td>
+      <td><span class="cmp-delta ${dc}">${d!==null?(dc==='up'?'▲':dc==='down'?'▼':'')+(d>=0?'+':'')+d.toFixed(2):'–'}</span></td>
+      <td>${rankHtml}</td>
+      <td>${grade?`<span class="grade ${gradeClass(grade)}">${grade}</span>`:'–'}</td>
+    </tr>`;
+  }).join('');
+  el.innerHTML = `
+    <div class="cmp-section-title"><i class="ti ti-table"></i>${escapeHtml(labelB)} vs ${escapeHtml(labelA)} per ERO${storeFilter?' — '+escapeHtml(storeFilter):''}</div>
+    <div class="cmp-table-wrap"><table class="cmp-table">
+      <thead><tr><th>Nama ERO</th><th>${escapeHtml(labelB)}</th><th>${escapeHtml(labelA)}</th><th>Delta Poin</th><th>Perub. Rank</th><th>Grade Terkini</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
+function getCmpSnapshots() {
+  let snaps = [...historyData].sort((a, b) => new Date(a.date) - new Date(b.date));
+  if (cmpPeriod > 0) {
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - cmpPeriod);
+    snaps = snaps.filter(s => new Date(s.date) >= cutoff);
+  }
+  return snaps.filter(s => s.rows_snapshot && s.rows_snapshot.length);
+}
+
+// ---- MODE 1: Store dari waktu ke waktu ----
+function renderCmpStoreTime(snaps, storeFilter, el) {
+  // Kumpulkan semua store yang muncul
+  const allStores = [...new Set(snaps.flatMap(s => (s.rows_snapshot||[]).map(r=>r.store).filter(Boolean)))].sort();
+  const stores = storeFilter ? [storeFilter] : allStores.slice(0, 6);
+  const COLORS = ['#F5B400','#3B82F6','#10B981','#EF4444','#8B5CF6','#F97316'];
+  const labels = snaps.map(s => s.label);
+
+  // Series per store
+  const series = stores.map((store, i) => ({
+    name: store,
+    color: COLORS[i % COLORS.length],
+    values: snaps.map(s => {
+      const rows = (s.rows_snapshot||[]).filter(r => r.store === store);
+      return rows.length ? rows.reduce((a,r)=>a+Number(r.total||0),0)/rows.length : null;
+    })
+  }));
+
+  const chartHtml = buildCmpLineChart(labels, series, 280);
+  const legendHtml = `<div class="cmp-chart-legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+
+  // Table: last 2 snaps comparison per store
+  const cur = snaps[snaps.length-1], prev = snaps[snaps.length-2];
+  const tableRows = allStores.map(store => {
+    const cRows = (cur.rows_snapshot||[]).filter(r=>r.store===store);
+    const pRows = (prev.rows_snapshot||[]).filter(r=>r.store===store);
+    if (!cRows.length) return null;
+    const cAvg = cRows.reduce((a,r)=>a+Number(r.total||0),0)/cRows.length;
+    const pAvg = pRows.length ? pRows.reduce((a,r)=>a+Number(r.total||0),0)/pRows.length : null;
+    const d = pAvg !== null ? cAvg - pAvg : null;
+    const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+    const ds = d === null ? '–' : (d>=0?'+':'')+d.toFixed(2);
+    const bestGrade = cRows.reduce((b,r)=>{ const g=calcGrade(Number(r.total||0)); const order=['Perfect','Good','Need Improve','Bad','Poor']; return order.indexOf(g)<order.indexOf(b)?g:b; }, 'Poor');
+    return `<tr>
+      <td><div class="cmp-name-cell">${escapeHtml(store)}</div></td>
+      <td><b>${cRows.length}</b></td>
+      <td><b>${pAvg!==null?pAvg.toFixed(2):'–'}</b></td>
+      <td><b style="color:var(--brand)">${cAvg.toFixed(2)}</b></td>
+      <td><span class="cmp-delta ${dc}">${dc==='up'?'▲':dc==='down'?'▼':''}${ds}</span></td>
+      <td><span class="grade ${gradeClass(bestGrade)}">${bestGrade}</span></td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  el.innerHTML = `
+    <div class="cmp-section-title"><i class="ti ti-chart-line"></i>Tren Rata-rata Poin per Store</div>
+    <div class="cmp-chart-wrap">${chartHtml}${legendHtml}</div>
+    <div class="cmp-section-title"><i class="ti ti-table"></i>Perbandingan ${escapeHtml(prev.label)} vs ${escapeHtml(cur.label)}</div>
+    <div class="cmp-table-wrap"><table class="cmp-table">
+      <thead><tr><th>Store</th><th>Jumlah ERO</th><th>Avg Sebelumnya</th><th>Avg Terkini</th><th>Delta</th><th>Grade Dominan</th></tr></thead>
+      <tbody>${tableRows || '<tr><td colspan="6" class="cmp-empty">Tidak ada data store.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+// ---- MODE 2: ERO dari waktu ke waktu ----
+function renderCmpEroTime(snaps, storeFilter, el) {
+  const cur = snaps[snaps.length-1];
+  const COLORS = ['#F5B400','#3B82F6','#10B981','#EF4444','#8B5CF6','#F97316','#EC4899','#14B8A6'];
+  let eroList = [...new Set(snaps.flatMap(s=>(s.rows_snapshot||[]).map(r=>r.name)))];
+  if (storeFilter) {
+    eroList = eroList.filter(name => snaps.some(s => (s.rows_snapshot||[]).some(r=>r.name===name && r.store===storeFilter)));
+  }
+  eroList = eroList.sort((a,b) => {
+    const aLast = (cur.rows_snapshot||[]).find(r=>r.name===a);
+    const bLast = (cur.rows_snapshot||[]).find(r=>r.name===b);
+    return (Number(bLast?.total||0)) - (Number(aLast?.total||0));
+  }).slice(0, 8);
+
+  const labels = snaps.map(s => s.label);
+  const series = eroList.map((name, i) => ({
+    name,
+    color: COLORS[i % COLORS.length],
+    values: snaps.map(s => { const r = (s.rows_snapshot||[]).find(rr=>rr.name===name); return r ? Number(r.total||0) : null; })
+  }));
+
+  const chartHtml = buildCmpLineChart(labels, series, 300);
+  const legendHtml = `<div class="cmp-chart-legend">${series.map(s=>`<span><i style="background:${s.color}"></i>${escapeHtml(s.name)}</span>`).join('')}</div>`;
+
+  // Table: tiap ERO, nilai awal, akhir, delta, trend rank
+  const prev = snaps[snaps.length-2];
+  const tableRows = eroList.map(name => {
+    const firstSnap = snaps.find(s=>(s.rows_snapshot||[]).some(r=>r.name===name));
+    const firstR = firstSnap ? (firstSnap.rows_snapshot||[]).find(r=>r.name===name) : null;
+    const curR = (cur.rows_snapshot||[]).find(r=>r.name===name);
+    const prevR = (prev.rows_snapshot||[]).find(r=>r.name===name);
+    const d = (curR && firstR) ? Number(curR.total||0) - Number(firstR.total||0) : null;
+    const dc = d === null ? 'neu' : d > 0 ? 'up' : d < 0 ? 'down' : 'neu';
+    const ds = d === null ? '–' : (d>=0?'+':'')+d.toFixed(2);
+    const rankDelta = (curR && prevR) ? prevR.rank - curR.rank : null;
+    const rankHtml = rankDelta === null ? '–' : rankDelta > 0 ? `<span class="cmp-delta up">▲ ${rankDelta}</span>` : rankDelta < 0 ? `<span class="cmp-delta down">▼ ${Math.abs(rankDelta)}</span>` : '<span class="cmp-delta neu">–</span>';
+    const grade = curR ? calcGrade(Number(curR.total||0)) : '–';
+    return `<tr>
+      <td><div class="cmp-name-cell">${escapeHtml(name)}</div><div class="cmp-store-tag">${escapeHtml(curR?.store||firstR?.store||'')}</div></td>
+      <td>${curR ? `<span class="cmp-rank-badge">#${curR.rank}</span>` : '–'}</td>
+      <td>${firstR ? Number(firstR.total||0).toFixed(2) : '–'}</td>
+      <td><b style="color:var(--brand)">${curR ? Number(curR.total||0).toFixed(2) : '–'}</b></td>
+      <td><span class="cmp-delta ${dc}">${dc==='up'?'▲':dc==='down'?'▼':''}${ds}</span></td>
+      <td>${rankHtml}</td>
+      <td>${curR ? `<span class="grade ${gradeClass(grade)}">${grade}</span>` : '–'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div class="cmp-section-title"><i class="ti ti-chart-line"></i>Tren Poin per ERO (Top 8${storeFilter?' – '+storeFilter:''})</div>
+    <div class="cmp-chart-wrap">${chartHtml}${legendHtml}</div>
+    <div class="cmp-section-title"><i class="ti ti-table"></i>Ringkasan Progres ERO</div>
+    <div class="cmp-table-wrap"><table class="cmp-table">
+      <thead><tr><th>Nama ERO</th><th>Rank Kini</th><th>Poin Awal Periode</th><th>Poin Terkini</th><th>Delta Poin</th><th>Perub. Rank</th><th>Grade</th></tr></thead>
+      <tbody>${tableRows||'<tr><td colspan="7" class="cmp-empty">Tidak ada data.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+// ---- MODE 3: Perbandingan ERO dalam satu Store ----
+function renderCmpEroStore(storeFilter, el) {
+  const cur = snaps => snaps[snaps.length-1];
+  const allSnaps = getCmpSnapshots();
+  if (!allSnaps.length) { el.innerHTML = '<div class="cmp-empty"><i class="ti ti-database-off"></i>Belum ada snapshot.</div>'; return; }
+
+  const storeMap = {};
+  (lastWithTotals || []).filter(r => r.store).forEach(r => {
+    const s = r.store;
+    if (!storeMap[s]) storeMap[s] = [];
+    storeMap[s].push(r);
+  });
+
+  const storesToShow = storeFilter ? [storeFilter] : Object.keys(storeMap).sort();
+  if (!storesToShow.length) { el.innerHTML = '<div class="cmp-empty"><i class="ti ti-building-store"></i>Tidak ada data store.</div>'; return; }
+
+  // For each store, show ERO side-by-side with bar chart
+  const storeHtml = storesToShow.map(store => {
+    const eros = (storeMap[store] || []).filter(r => isActive(r)).sort((a,b) => b.total - a.total);
+    if (!eros.length) return '';
+    const maxPt = Math.max(...eros.map(r=>r.total), 0.01);
+    const avgPt = eros.reduce((s,r)=>s+r.total,0)/eros.length;
+
+    // Trend for this store from snapshots
+    const trendVals = allSnaps.map(s => {
+      const rows = (s.rows_snapshot||[]).filter(r=>r.store===store);
+      return rows.length ? rows.reduce((a,r)=>a+Number(r.total||0),0)/rows.length : null;
+    }).filter(v=>v!==null);
+    const trendDir = trendVals.length >= 2 ? (trendVals[trendVals.length-1] >= trendVals[0] ? '▲' : '▼') : '';
+    const trendColor = trendVals.length >= 2 ? (trendVals[trendVals.length-1] >= trendVals[0] ? '#059669' : '#DC2626') : 'var(--text-muted)';
+
+    const COLORS = ['#F5B400','#3B82F6','#10B981','#EF4444','#8B5CF6','#F97316','#EC4899','#14B8A6'];
+    const barsHtml = eros.map((r, i) => {
+      const pct = (r.total / maxPt) * 100;
+      const grade = calcGrade(r.total);
+      return `<div class="sp-bar-wrap">
+        <span class="sp-bar-label" title="${escapeHtml(r.name)}" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(r.name.split(' ')[0])}</span>
+        <div class="sp-bar"><span style="width:${pct}%;background:${COLORS[i%COLORS.length]}"></span></div>
+        <span class="sp-val">${r.total.toFixed(1)}</span>
+        <span class="grade ${gradeClass(grade)}" style="font-size:10px;padding:2px 6px;">${grade.replace('Need Improve','NI')}</span>
+      </div>`;
+    }).join('');
+
+    const miniTrend = trendVals.length>=2 ? buildCmpSparkline(trendVals, 80, 28) : '';
+
+    return `<div class="store-pair-card">
+      <div class="sp-name">${escapeHtml(store)}<span style="color:${trendColor};font-size:13px;">${trendDir} ${trendVals.length>=2?trendVals[trendVals.length-1].toFixed(2):''}</span></div>
+      <div class="sp-sub">${eros.length} ERO aktif · Avg <b>${avgPt.toFixed(2)}</b> · ${miniTrend ? 'Tren: '+miniTrend : ''}</div>
+      ${barsHtml}
+    </div>`;
+  }).join('');
+
+  // Summary comparison table across stores (current period)
+  const storeTableRows = storesToShow.map(store => {
+    const eros = (storeMap[store] || []).filter(r => isActive(r));
+    if (!eros.length) return '';
+    const avg = eros.reduce((s,r)=>s+r.total,0)/eros.length;
+    const best = [...eros].sort((a,b)=>b.total-a.total)[0];
+    const worst = [...eros].sort((a,b)=>a.total-b.total)[0];
+    const grade = calcGrade(avg);
+    const trendVals = allSnaps.map(s => {
+      const rows = (s.rows_snapshot||[]).filter(r=>r.store===store);
+      return rows.length ? rows.reduce((a,r)=>a+Number(r.total||0),0)/rows.length : null;
+    }).filter(v=>v!==null);
+    const d = trendVals.length >= 2 ? trendVals[trendVals.length-1] - trendVals[0] : null;
+    const dc = d===null?'neu':d>0?'up':d<0?'down':'neu';
+    return `<tr>
+      <td><div class="cmp-name-cell">${escapeHtml(store)}</div></td>
+      <td>${eros.length}</td>
+      <td><b style="color:var(--brand)">${avg.toFixed(2)}</b></td>
+      <td><span class="grade ${gradeClass(grade)}">${grade}</span></td>
+      <td>${escapeHtml(best?.name||'–')} <span style="font-family:monospace;font-size:11px">(${best?.total?.toFixed(1)||''})</span></td>
+      <td>${escapeHtml(worst?.name||'–')} <span style="font-family:monospace;font-size:11px">(${worst?.total?.toFixed(1)||''})</span></td>
+      <td>${d!==null?`<span class="cmp-delta ${dc}">${dc==='up'?'▲':dc==='down'?'▼':''}${(d>=0?'+':'')+d.toFixed(2)}</span>`:'–'}</td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  el.innerHTML = `
+    <div class="cmp-section-title"><i class="ti ti-users"></i>ERO per Store — Saat Ini</div>
+    <div class="store-pair-grid">${storeHtml || '<div class="cmp-empty"><i class="ti ti-database-off"></i>Tidak ada data store aktif.</div>'}</div>
+    <div class="cmp-section-title"><i class="ti ti-table"></i>Perbandingan Antar Store</div>
+    <div class="cmp-table-wrap"><table class="cmp-table">
+      <thead><tr><th>Store</th><th>ERO Aktif</th><th>Rata-rata</th><th>Grade</th><th>Terbaik</th><th>Terendah</th><th>Tren Periode</th></tr></thead>
+      <tbody>${storeTableRows||'<tr><td colspan="7" class="cmp-empty">Tidak ada data.</td></tr>'}</tbody>
+    </table></div>`;
+}
+
+// ---- Helpers chart ----
+function buildCmpLineChart(labels, series, height) {
+  if (!labels.length || !series.length) return '<div class="cmp-empty"><i class="ti ti-chart-line"></i>Tidak cukup data.</div>';
+  const W = 820, H = height || 260, padL = 48, padR = 20, padT = 20, padB = 40;
+  const innerW = W - padL - padR, innerH = H - padT - padB;
+  const allVals = series.flatMap(s => s.values.filter(v=>v!==null));
+  const minV = Math.min(...allVals), maxV = Math.max(...allVals);
+  const rangeV = (maxV - minV) || 1;
+  const n = labels.length;
+  const xStep = n > 1 ? innerW / (n-1) : 0;
+
+  const toX = i => padL + i * xStep;
+  const toY = v => padT + innerH - ((v - minV) / rangeV) * innerH;
+
+  // Grid lines
+  const gridCount = 4;
+  const gridLines = Array.from({length:gridCount+1}, (_,i) => {
+    const v = minV + (rangeV/gridCount)*i;
+    const y = toY(v);
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(226,232,240,.5)" stroke-width="1" stroke-dasharray="4 4"/>
+      <text x="${(padL-6).toFixed(1)}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="central" font-size="10" fill="rgba(100,116,139,.8)">${v.toFixed(1)}</text>`;
+  }).join('');
+
+  // X axis labels (max 8 visible)
+  const step = Math.ceil(n / 8);
+  const xLabels = labels.map((l, i) => {
+    if (i % step !== 0 && i !== n-1) return '';
+    const x = toX(i);
+    const short = l.length > 8 ? l.slice(0,8)+'…' : l;
+    return `<text x="${x.toFixed(1)}" y="${(H-8).toFixed(1)}" text-anchor="middle" font-size="10" fill="rgba(100,116,139,.8)">${escapeHtml(short)}</text>`;
+  }).join('');
+
+  // Series paths
+  const seriesSvg = series.map(s => {
+    const pts = s.values.map((v,i) => v !== null ? `${toX(i).toFixed(1)},${toY(v).toFixed(1)}` : null);
+    // Build segments (skip nulls)
+    let pathD = '';
+    let inPath = false;
+    pts.forEach((p,i) => {
+      if (p === null) { inPath = false; return; }
+      if (!inPath) { pathD += `M${p} `; inPath = true; }
+      else pathD += `L${p} `;
+    });
+    const dots = pts.map((p,i) => p ? `<circle cx="${toX(i).toFixed(1)}" cy="${toY(s.values[i]).toFixed(1)}" r="3.5" fill="${s.color}" stroke="#fff" stroke-width="1.5"/>` : '').join('');
+    return `<path d="${pathD.trim()}" fill="none" stroke="${s.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+      ${dots}`;
+  }).join('');
+
+  return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="min-width:${Math.min(W,600)}px">
+    ${gridLines}
+    ${xLabels}
+    ${seriesSvg}
+  </svg>`;
+}
+
+function buildCmpSparkline(values, w, h) {
+  if (values.length < 2) return '';
+  const W = w||80, H = h||28;
+  const min = Math.min(...values), max = Math.max(...values);
+  const range = (max-min)||1;
+  const step = (W-4) / (values.length-1);
+  const pts = values.map((v,i) => `${(2+i*step).toFixed(1)},${(H-2-((v-min)/range)*(H-4)).toFixed(1)}`).join(' ');
+  const color = values[values.length-1] >= values[0] ? '#059669' : '#DC2626';
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:inline-block;vertical-align:middle"><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
 let appBooted = false;
 async function bootApp(){
   if(appBooted) return; appBooted = true;
