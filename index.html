@@ -1226,6 +1226,11 @@
           <div class="mode-choice"><input type="radio" id="uploadArchive" name="uploadMode" value="archive" onchange="updateUploadModeUI()"><label for="uploadArchive"><i class="ti ti-archive"></i>Arsip Bulan Sebelumnya</label></div>
         </div>
         <div class="month-tools">
+          <div class="tool-card" id="customDateCard">
+            <label>Tanggal Data (opsional — untuk susulan)</label>
+            <input type="date" id="customSnapshotDate">
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">Kosongkan kalau ini upload hari ini. Isi kalau Anda telat upload beberapa hari (misalnya 5 hari absen) — supaya riwayat harian &amp; mingguan tetap tercatat sesuai tanggal aslinya, bukan menumpuk di hari ini. Kalau ada beberapa file tertinggal, upload satu per satu dari yang paling lama ke yang terbaru.</div>
+          </div>
           <div class="tool-card" id="archiveMonthCard" style="display:none;">
             <label>Bulan Arsip</label>
             <input type="month" id="archiveMonth">
@@ -1256,6 +1261,7 @@
             <button onclick="saveSnapshot()"><i class="ti ti-device-floppy"></i>Simpan snapshot hari ini</button>
             <button class="danger" onclick="clearAll()"><i class="ti ti-trash"></i>Hapus semua</button>
             <button onclick="loadData();loadHistory();"><i class="ti ti-refresh"></i>Refresh dari server</button>
+            <button onclick="downloadFullBackup(this)"><i class="ti ti-cloud-download"></i>Download Backup Lengkap</button>
           </div>
         </details>
       </div>
@@ -1345,6 +1351,7 @@
           <div class="filter-field"><label>Sampai tanggal</label><input type="date" id="dateTo" onchange="applyDateFilter()"></div>
           <button onclick="setDateRange(7)">7 Hari</button><button onclick="setDateRange(14)">14 Hari</button><button onclick="setDateRange(30)">30 Hari</button><button onclick="clearDateFilter()">Semua</button>
         </div>
+        <div id="historyLimitBanner"></div>
         <div id="historySummary"></div>
         <div id="historyTrend"></div>
         <div id="history" class="history-scroll"></div>
@@ -1522,6 +1529,7 @@ function getUploadMode(){ return document.querySelector('input[name="uploadMode"
 function updateUploadModeUI(){
   const archive = getUploadMode()==='archive';
   const card=document.getElementById('archiveMonthCard'); if(card) card.style.display=archive?'block':'none';
+  const dcard=document.getElementById('customDateCard'); if(dcard) dcard.style.display=archive?'none':'block';
   const zone=document.getElementById('dropZone'); if(zone) zone.querySelector('.main-txt').textContent=archive?'Upload Excel Bulan Sebelumnya':'Upload Excel Data Berjalan';
 }
 function monthLabel(monthKey){
@@ -1611,7 +1619,10 @@ function handleFile(file){
       const snapRows=sorted.map((r,i)=>({...buildDataMeta(r),name:r.name,total:Math.round(r.total*100)/100,grade:calcGrade(r.total),rank:i+1}));
       const archiveLabel=`Arsip ${monthLabel(month)}`;
       const avg=wt.length?wt.reduce((s,r)=>s+r.total,0)/wt.length:0;
-      const item={label:archiveLabel,date:new Date(month+'-28T12:00:00').toISOString(),avg:Math.round(avg*100)/100,
+      const [archY,archM]=month.split('-').map(Number);
+      const lastDayOfMonth=new Date(archY,archM,0).getDate();
+      const archiveDate=new Date(archY,archM-1,lastDayOfMonth,12,0,0);
+      const item={label:archiveLabel,date:archiveDate.toISOString(),avg:Math.round(avg*100)/100,
         top:sorted[0]?.name||'-',top_pt:sorted[0]?.total||0,bottom:sorted[sorted.length-1]?.name||'-',bottom_pt:sorted[sorted.length-1]?.total||0,
         count:wt.length,rows_snapshot:snapRows,file_name:`ARCHIVE_MONTH:${month}|${file.name}`,uploaded_by:currentUser?.email||'Admin'};
       const result=await insertHistoryWithFallback(item);
@@ -1621,7 +1632,11 @@ function handleFile(file){
     } else {
       const beforeRank=getRankedRows(rows); const prevMap={};beforeRank.forEach(r=>prevMap[r.name]=r.rank);
       newRows.forEach(r=>r.prevRank=Object.prototype.hasOwnProperty.call(prevMap,r.name)?prevMap[r.name]:null);
-      rows=newRows; lastUpdateLabel=new Date().toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+      rows=newRows;
+      const customDateVal=document.getElementById('customSnapshotDate')?.value||'';
+      const isBackfill=!!customDateVal;
+      const snapDate=isBackfill ? new Date(customDateVal+'T12:00:00') : new Date();
+      lastUpdateLabel=isBackfill ? snapDate.toLocaleDateString('id-ID',{dateStyle:'medium'})+' (susulan, diinput '+new Date().toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'})+')' : snapDate.toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
       await persist(); render();
       const newWithTotal=newRows.map(r=>({name:r.name,total:calcTotal(r),store:r.store}));
       const newFingerprint=fingerprintFromRows(newWithTotal);
@@ -1631,11 +1646,18 @@ function handleFile(file){
         const lastFingerprint=fingerprintFromRows(lastSnap.rows_snapshot.map(r=>({name:r.name,total:r.total,store:r.store})));
         isDuplicate=lastFingerprint===newFingerprint;
       }
-      if(!isDuplicate){
-        const snapResult=await createSnapshotEntry(new Date().toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'}),{fileName:file.name});
-        if(snapResult.ok)await afterSnapshotSaved();
+      let gapNote='';
+      if(lastSnap&&lastSnap.date){
+        const gapDays=Math.round((snapDate.getTime()-new Date(lastSnap.date).getTime())/86400000);
+        if(gapDays>1) gapNote=` Ada jeda ${gapDays} hari sejak snapshot terakhir (${escapeHtml(lastSnap.label)}) — Yesterday vs Today &amp; Weekly akan membandingkan rentang ${gapDays} hari ini, bukan 1 hari.`;
       }
-      setStatus(`✓ Data berjalan diperbarui: ${newRows.length} ERO. Target, Achievement, Point dan status ranking ikut tersimpan.`,true);
+      if(!isDuplicate){
+        const label=isBackfill ? (snapDate.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'})+' (Susulan)') : new Date().toLocaleString('id-ID',{dateStyle:'medium',timeStyle:'short'});
+        const snapResult=await createSnapshotEntry(label,{fileName:file.name,date:snapDate.toISOString()});
+        if(snapResult.ok)await afterSnapshotSaved();
+        if(customDateVal){ const dEl=document.getElementById('customSnapshotDate'); if(dEl) dEl.value=''; }
+      }
+      setStatus(`✓ Data berjalan diperbarui: ${newRows.length} ERO.${isBackfill?' Disimpan sebagai data susulan tanggal '+snapDate.toLocaleDateString('id-ID',{dateStyle:'medium'})+'.':''}${gapNote}`,true);
     }
     document.getElementById('fileInput').value='';
   }catch(err){setStatus('Gagal membaca file: '+err.message,false);}};reader.readAsArrayBuffer(file);
@@ -1690,7 +1712,7 @@ async function createSnapshotEntry(label, meta={}){
   const rowsSnapshot=sorted.map((r,i)=>({...buildDataMeta(r),name:r.name,total:Math.round(r.total*100)/100,grade:calcGrade(r.total),store:r.store||'',rank:i+1}));
   const extremes = computeStoreExtremes(wt);
   const item={
-    label,date:new Date().toISOString(),avg:Math.round(avg*100)/100,
+    label,date:meta.date||new Date().toISOString(),avg:Math.round(avg*100)/100,
     top:sorted[0]?.name||'-',top_pt:sorted[0]?.total||0,
     bottom:sorted[sorted.length-1]?.name||'-',bottom_pt:sorted[sorted.length-1]?.total||0,
     count:rowsSnapshot.length,rows_snapshot:rowsSnapshot,
@@ -1954,6 +1976,46 @@ function updateSidebarToggleUI(collapsed){
     updateSidebarToggleUI(collapsed);
   });
 })();
+async function downloadFullBackup(btnEl){
+  if(!isAdmin){ alert('Login sebagai admin terlebih dahulu.'); return; }
+  if(!SUPABASE_READY){ alert('Supabase belum dikonfigurasi.'); return; }
+  const btn = btnEl;
+  if(btn){ btn.disabled = true; btn.innerHTML = '<i class="ti ti-loader"></i> Menyiapkan backup...'; }
+  try{
+    const {data: stateData, error: stateErr} = await sb.from('dashboard_state').select('*').eq('id',1).maybeSingle();
+    if(stateErr) throw stateErr;
+
+    let allHistory = []; let from = 0; const pageSize = 1000;
+    while(true){
+      const {data: page, error: pageErr} = await sb.from('rank_history').select('*').order('date',{ascending:true}).range(from, from+pageSize-1);
+      if(pageErr) throw pageErr;
+      if(!page || page.length===0) break;
+      allHistory = allHistory.concat(page);
+      if(page.length < pageSize) break;
+      from += pageSize;
+    }
+
+    const backup = {
+      exported_at: new Date().toISOString(),
+      exported_by: currentUser?.email || 'Admin',
+      dashboard_state: stateData || null,
+      rank_history: allHistory,
+      counts: { rank_history_rows: allHistory.length, dashboard_state_ero: stateData?.rows?.length || 0 }
+    };
+    const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const dateStr = new Date().toISOString().slice(0,10);
+    a.href = url; a.download = `BigMalang2-Backup-${dateStr}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert(`Backup berhasil diunduh: ${allHistory.length} snapshot riwayat + data berjalan (${backup.counts.dashboard_state_ero} ERO). Simpan file ini di tempat aman (Google Drive/laptop) sebagai cadangan.`);
+  } catch(err){
+    alert('Gagal membuat backup: '+err.message);
+  } finally {
+    if(btn){ btn.disabled = false; btn.innerHTML = '<i class="ti ti-cloud-download"></i>Download Backup Lengkap'; }
+  }
+}
 function exportExcel(){
   const withTotals = rows.filter(isActive).map((r,i)=>({...r, total: calcTotal(r), idx:i}));
   const sorted = [...withTotals].sort((a,b)=>b.total-a.total);
@@ -2388,11 +2450,20 @@ function renderHistory(history){
   }).join('');
 }
 
+const HISTORY_FETCH_LIMIT = 500; // ~1.5 tahun snapshot harian. Naikkan lagi jika suatu saat banner peringatan muncul.
+function renderHistoryLimitBanner(count){
+  const el=document.getElementById('historyLimitBanner'); if(!el)return;
+  if(count>=HISTORY_FETCH_LIMIT){
+    el.innerHTML=`<div class="empty" style="text-align:left; background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:12px 14px; margin-bottom:14px;"><i class="ti ti-alert-triangle" style="color:#D97706;"></i> Jumlah snapshot sudah mencapai batas pengambilan saat ini (${HISTORY_FETCH_LIMIT}). Snapshot yang lebih lama dari ini <b>tidak ikut ditampilkan</b> di grafik tren &amp; perbandingan. Beri tahu saya kalau ini terjadi supaya batasnya bisa dinaikkan lagi.</div>`;
+  } else {
+    el.innerHTML='';
+  }
+}
 async function loadHistory(){
   if(!SUPABASE_READY){historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();return;}
-  const {data,error}=await sb.from('rank_history').select('*').order('date',{ascending:false}).limit(100);
+  const {data,error}=await sb.from('rank_history').select('*').order('date',{ascending:false}).limit(HISTORY_FETCH_LIMIT);
   if(error){console.error(error);historyData=[];filteredHistoryData=[];renderHistory([]);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();return;}
-  historyData=data||[];filteredHistoryData=getFilteredHistory();renderHistory(filteredHistoryData);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();
+  historyData=data||[];filteredHistoryData=getFilteredHistory();renderHistory(filteredHistoryData);renderStoreCompareControls();renderYesterdayToday();renderMoversPanel();renderMonthlyCompare();renderDashboardCharts(lastWithTotals.filter(isActive));updateSnapshotReminder();renderHistoryLimitBanner(historyData.length);
 }
 
 function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -2939,12 +3010,30 @@ function buildCmpSparkline(values, w, h) {
 }
 
 let appBooted = false;
+const AUTO_LOGOUT_MINUTES = 60; // ubah angka ini kalau ingin durasi berbeda
+let autoLogoutTimer = null;
+function resetAutoLogoutTimer(){
+  if(!SUPABASE_READY) return;
+  if(autoLogoutTimer) clearTimeout(autoLogoutTimer);
+  autoLogoutTimer = setTimeout(async ()=>{
+    try{ await sb.auth.signOut(); }catch(e){}
+    alert('Sesi Anda otomatis keluar karena tidak ada aktivitas selama '+AUTO_LOGOUT_MINUTES+' menit. Silakan login kembali.');
+    location.reload();
+  }, AUTO_LOGOUT_MINUTES*60*1000);
+}
+function initAutoLogoutWatcher(){
+  ['mousemove','mousedown','keydown','touchstart','scroll'].forEach(evt=>{
+    document.addEventListener(evt, resetAutoLogoutTimer, {passive:true});
+  });
+  resetAutoLogoutTimer();
+}
 async function bootApp(){
   if(appBooted) return; appBooted = true;
   await loadAdminState();
   if(SUPABASE_READY){sb.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;isAdmin=isAdminFromUser(currentUser);updateAdminUI();render();});}
   await loadData();await loadHistory();
   if(SUPABASE_READY)setInterval(async()=>{if(!document.hidden&&!isAdmin)await loadData();},30000);
+  initAutoLogoutWatcher();
 }
 document.addEventListener('DOMContentLoaded',()=>{ const d=new Date(); d.setMonth(d.getMonth()-1); const m=document.getElementById('archiveMonth'); if(m)m.value=d.toISOString().slice(0,7); updateUploadModeUI(); });
 (async function initGate(){
