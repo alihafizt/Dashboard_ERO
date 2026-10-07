@@ -10,7 +10,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1152,6 +1152,225 @@
     .kpi-legend { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .dash-archive-banner .dab-src { display: none; }
   }
+
+  /* ==========================================================================
+     BM2 GLASS SKIN — tampilan baru (bento / glass) — CSS saja, logika tidak diubah
+     ========================================================================== */
+  :root {
+    --brand: #F59E0B; --brand-hover: #D97706; --brand-light: rgba(245,158,11,.14);
+    --bg-body: #F1F5FB; --panel-bg: rgba(255,255,255,.78); --panel-border: rgba(255,255,255,.9);
+    --border-light: rgba(15,23,42,.08);
+    --shadow-sm: 0 6px 20px -8px rgba(15,23,42,.10); --shadow-md: 0 14px 34px -12px rgba(15,23,42,.16);
+  }
+  [data-theme="dark"] {
+    --bg-body: #060A12; --panel-bg: rgba(13,22,42,.72); --panel-border: rgba(255,255,255,.07);
+    --text-main: #F1F5F9; --text-muted: #94A3B8; --border-light: rgba(255,255,255,.08);
+    --success-light: rgba(16,185,129,.12); --good-light: rgba(59,130,246,.12);
+    --warning-light: rgba(245,158,11,.12); --bad-light: rgba(249,115,22,.12); --danger-light: rgba(244,63,94,.12);
+    --shadow-sm: 0 10px 30px -10px rgba(0,0,0,.55); --shadow-md: 0 14px 38px -10px rgba(0,0,0,.65);
+  }
+  body, button, input, select, textarea { font-family: 'Plus Jakarta Sans','Inter',system-ui,sans-serif; }
+  h1, h2, h3, .sidebar-brand, .insight-card h3, .avatar { font-family: 'Plus Jakarta Sans','Inter',sans-serif; }
+  body {
+    background-color: var(--bg-body);
+    background-image: radial-gradient(at 0% 0%, rgba(245,158,11,.10) 0, transparent 45%),
+      radial-gradient(at 100% 0%, rgba(59,130,246,.09) 0, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(148,163,184,.12) 0, transparent 65%);
+    background-attachment: fixed;
+  }
+  [data-theme="dark"] body {
+    background-image: radial-gradient(at 0% 0%, rgba(245,158,11,.08) 0, transparent 45%),
+      radial-gradient(at 100% 0%, rgba(59,130,246,.07) 0, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(17,27,51,.7) 0, transparent 65%);
+  }
+  ::-webkit-scrollbar-thumb { background: #94A3B8; border: 0; }
+  [data-theme="dark"] ::-webkit-scrollbar-thumb { background: #334155; }
+  [data-theme="dark"] ::-webkit-scrollbar-track { background: rgba(10,16,30,.6); }
+
+  /* Kartu kaca */
+  .panel, .hero, .app-sidebar, .modal-box {
+    border-radius: 16px; backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  }
+  .panel { padding: 22px 24px; }
+  .panel:hover { border-color: rgba(245,158,11,.25); }
+  [data-theme="dark"] .panel:hover { border-color: rgba(255,255,255,.13); box-shadow: var(--shadow-sm); }
+  .panel h2 { font-size: 13px; font-weight: 800; letter-spacing: .06em; margin-bottom: 18px; }
+  .panel h2 i { background: none; padding: 0; font-size: 19px; color: var(--brand); }
+  [data-theme="dark"] .panel h2 { color: #E2E8F0 !important; }
+
+  /* Header / hero */
+  .hero { position: relative; overflow: hidden; padding: 24px 28px; }
+  .hero::before, .hero::after { content: ''; position: absolute; width: 300px; height: 300px; border-radius: 50%; filter: blur(60px); pointer-events: none; }
+  .hero::before { right: -80px; top: -110px; background: rgba(245,158,11,.16); }
+  .hero::after { left: -90px; bottom: -130px; background: rgba(59,130,246,.13); }
+  .hero > * { position: relative; z-index: 1; }
+  .hero-left::before {
+    content: 'PERFORMA OPERASIONAL RETAIL'; display: inline-block; margin-bottom: 10px; padding: 3px 11px;
+    border-radius: 99px; font: 700 10.5px 'JetBrains Mono', monospace; letter-spacing: .04em;
+    color: #B45309; background: rgba(245,158,11,.16); border: 1px solid rgba(245,158,11,.32);
+  }
+  [data-theme="dark"] .hero-left::before { color: #FCD34D; }
+  .hero-left h1 { font-weight: 800; letter-spacing: -.02em; }
+  .hero-left h1 i { background: linear-gradient(135deg,#D97706,#F59E0B,#FBBF24); color: #0B1326; border-radius: 12px; padding: 9px; font-size: 22px; box-shadow: 0 6px 18px rgba(245,158,11,.3); }
+  .mode-badge { font-family: 'JetBrains Mono', monospace; border-radius: 8px; border: 1px solid var(--border-light); }
+  [data-theme="dark"] .mode-badge.view { background: rgba(255,255,255,.05); color: #CBD5E1; }
+
+  /* Tombol */
+  button { border-radius: 10px; font-weight: 600; }
+  [data-theme="dark"] button:not(.primary):not(.danger) { background: rgba(255,255,255,.05); border-color: rgba(255,255,255,.10); }
+  button.primary { background: linear-gradient(90deg,#F59E0B,#D97706); border-color: transparent; color: #0B1326; font-weight: 700; box-shadow: 0 6px 18px rgba(245,158,11,.28); }
+  button.primary:hover { background: linear-gradient(90deg,#D97706,#B45309); color: #0B1326; }
+  [data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.09); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--brand) !important; box-shadow: 0 0 0 2px rgba(245,158,11,.2); }
+
+  /* Sidebar */
+  .app-sidebar { padding: 14px 12px; }
+  .sidebar-brand { font-weight: 800; }
+  .nav-item { border-radius: 12px; border: 0; border-left: 2px solid transparent; font-size: 13px; }
+  .nav-item.active, [data-theme="dark"] .nav-item.active {
+    background: linear-gradient(90deg, rgba(245,158,11,.20), transparent); border-left-color: var(--brand);
+    color: #B45309; box-shadow: none;
+  }
+  [data-theme="dark"] .nav-item.active { color: #FCD34D; }
+
+  /* KPI hero */
+  .kpi-hero { border-left: 4px solid var(--brand); }
+  .kpi-big > span:first-child { font-family: 'JetBrains Mono', monospace; font-weight: 800; letter-spacing: -.03em; }
+  .kpi-label, .kpi-grades-head { text-transform: uppercase; letter-spacing: .06em; font-size: 11.5px; font-weight: 700; }
+  .kpi-stack { height: 14px; border-radius: 99px; padding: 1px; background: rgba(100,116,139,.14); border: 1px solid var(--border-light); }
+  .kpi-stack > * { border-radius: 99px; }
+  .kpi-legend li { padding: 7px 9px; border-radius: 10px; background: rgba(100,116,139,.07); border: 1px solid var(--border-light); }
+  [data-theme="dark"] .kpi-delta.none, [data-theme="dark"] .kpi-delta.same { background: rgba(255,255,255,.06); }
+
+  /* Podium */
+  .podium-card { background: rgba(255,255,255,.7); border-color: var(--border-light); border-radius: 20px; }
+  [data-theme="dark"] .podium-card { background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.10); box-shadow: 0 14px 30px rgba(0,0,0,.35); }
+  .podium-card.p1 { background: linear-gradient(180deg, rgba(245,158,11,.16), rgba(255,255,255,.55)); border-color: rgba(245,158,11,.4); }
+  [data-theme="dark"] .podium-card.p1 { background: linear-gradient(180deg, rgba(245,158,11,.18), rgba(245,158,11,.03)); }
+  [data-theme="dark"] .p1 .podium-bar .pt { color: #FBBF24; }
+  [data-theme="dark"] .p2 .podium-medal, [data-theme="dark"] .p3 .podium-medal { background: rgba(255,255,255,.08); color: #CBD5E1; }
+  [data-theme="dark"] .p1 .podium-medal { background: rgba(245,158,11,.2); color: #FCD34D; }
+  [data-theme="dark"] .avatar { border-color: #0B1326; }
+  [data-theme="dark"] .podium-name, [data-theme="dark"] .podium-bar .pt { color: #F8FAFC; }
+
+  /* Leaderboard & tabel */
+  .leaderboard-row { border-radius: 12px; border: 1px solid transparent; }
+  .leaderboard-row:hover { background: rgba(245,158,11,.07); border-color: rgba(245,158,11,.18); transform: none; }
+  [data-theme="dark"] .leaderboard-row:hover { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.08); }
+  .lb-track, .grade-bar-track { background: rgba(100,116,139,.16); }
+  [data-theme="dark"] .lb-track, [data-theme="dark"] .grade-bar-track { background: rgba(255,255,255,.06); }
+  .lb-categories .point-category-grid span { border-radius: 8px; font-family: 'JetBrains Mono', monospace; background: rgba(100,116,139,.09); }
+  [data-theme="dark"] .lb-categories .point-category-grid span { background: rgba(255,255,255,.05); color: #CBD5E1; }
+  [data-theme="dark"] .lb-store, [data-theme="dark"] .lb-name .lb-store { color: #94A3B8; }
+  thead th { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+  [data-theme="dark"] thead th { background: rgba(255,255,255,.03); color: #94A3B8; }
+
+  /* Grade jadi pill tembus pandang */
+  .grade { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; border: 1px solid transparent; }
+  .grade.perfect { background: rgba(16,185,129,.14); color: #047857; border-color: rgba(16,185,129,.30); }
+  .grade.good { background: rgba(59,130,246,.14); color: #1D4ED8; border-color: rgba(59,130,246,.30); }
+  .grade.needimprove { background: rgba(245,158,11,.16); color: #B45309; border-color: rgba(245,158,11,.32); }
+  .grade.bad { background: rgba(249,115,22,.15); color: #C2410C; border-color: rgba(249,115,22,.32); }
+  .grade.poor { background: rgba(244,63,94,.14); color: #BE123C; border-color: rgba(244,63,94,.30); }
+  [data-theme="dark"] .grade.perfect { color: #6EE7B7; } [data-theme="dark"] .grade.good { color: #93C5FD; }
+  [data-theme="dark"] .grade.needimprove { color: #FCD34D; } [data-theme="dark"] .grade.bad { color: #FDBA74; }
+  [data-theme="dark"] .grade.poor { color: #FDA4AF; }
+
+  /* Watchlist, alert, insight */
+  .watch-row { background: rgba(244,63,94,.08); border-color: rgba(244,63,94,.25); border-radius: 12px; }
+  [data-theme="dark"] .watch-name { color: #FFE4E6; } [data-theme="dark"] .watch-store { color: #FDA4AF; }
+  [data-theme="dark"] .watch-grade, [data-theme="dark"] .watch-pt, [data-theme="dark"] .watch-left i { color: #FB7185; }
+  .alert-item { border: 1px solid var(--border-light); border-radius: 12px; box-shadow: none; }
+  [data-theme="dark"] .alert-item.critical { color: #FECDD3; border-color: rgba(244,63,94,.28); } [data-theme="dark"] .alert-item.critical div { color: #FDA4AF; }
+  [data-theme="dark"] .alert-item.warning { color: #FDE68A; border-color: rgba(245,158,11,.28); } [data-theme="dark"] .alert-item.warning div { color: #FCD34D; }
+  [data-theme="dark"] .alert-item.good { color: #A7F3D0; border-color: rgba(16,185,129,.28); } [data-theme="dark"] .alert-item.good div { color: #6EE7B7; }
+  .insight-card, .mobile-kpi, .compare-kpi, .score-card { border-radius: 12px; border-color: var(--border-light); }
+  [data-theme="dark"] .insight-card, [data-theme="dark"] .mobile-kpi { background: rgba(255,255,255,.03); }
+  [data-theme="dark"] .insight-card.gain { border-color: rgba(16,185,129,.30); background: rgba(16,185,129,.08); }
+  [data-theme="dark"] .insight-card.drop { border-color: rgba(244,63,94,.30); background: rgba(244,63,94,.08); }
+  .insight-card .big, .mobile-kpi .v { font-family: 'JetBrains Mono', monospace; font-weight: 800; }
+  [data-theme="dark"] .modal-overlay { background: rgba(0,0,0,.8); backdrop-filter: blur(8px); }
+
+  /* ==========================================================================
+     BENTO DASHBOARD — layout ala desain baru (hanya penataan, logika tetap)
+     ========================================================================== */
+  .dashboard-grid { grid-template-columns: repeat(12, minmax(0,1fr)); gap: 20px; }
+  .dashboard-grid > .panel { grid-column: span 12; }
+  .dashboard-grid > .bx-7 { grid-column: span 7; } .dashboard-grid > .bx-5 { grid-column: span 5; }
+  .dashboard-grid > .bx-8 { grid-column: span 8; } .dashboard-grid > .bx-4 { grid-column: span 4; }
+  .dashboard-grid > .bx-6 { grid-column: span 6; }
+  .o1{order:1}.o2{order:2}.o3{order:3}.o4{order:4}.o5{order:5}.o6{order:6}.o7{order:7}.o8{order:8}
+  .dashboard-grid > [data-archive-only] { order: 9; }
+  @media (max-width: 1100px) { .dashboard-grid > .panel { grid-column: 1 / -1 !important; } }
+
+  /* Baris KPI: 3 kartu */
+  .kpi-row { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 20px; }
+  .kpi-row > .panel { padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 12px; min-width: 0; }
+  .kpi-c1 { grid-column: span 3; border: 1.5px solid #F59E0B !important; box-shadow: 0 0 22px -6px rgba(245,158,11,.45) !important; }
+  .kpi-c2 { grid-column: span 3; border: 1.5px solid #3B82F6 !important; box-shadow: 0 0 22px -6px rgba(59,130,246,.45) !important; }
+  .kpi-c3 { grid-column: span 6; }
+  @media (max-width: 1100px) { .kpi-c1, .kpi-c2 { grid-column: span 6; } .kpi-c3 { grid-column: span 12; } }
+  @media (max-width: 640px) { .kpi-c1, .kpi-c2, .kpi-c3 { grid-column: span 12; } }
+  .kpi-lbl { font-size: 11.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+  .kpi-lbl b { font-weight: 800; color: var(--brand); }
+  .kpi-unit { font: 500 12px 'JetBrains Mono', monospace; color: var(--text-muted); margin-left: 6px; }
+  .kpi-c1 .kpi-period, .kpi-c3 .kpi-period { gap: 6px; }
+  .kpi-c1 select { font-size: 11px; padding: 5px 8px; max-width: 100%; }
+  #statAvg, #statCount { font: 800 clamp(34px, 4vw, 44px)/1 'JetBrains Mono', monospace; letter-spacing: -.03em; }
+  .kpi-c2 .kpi-meta { font: 500 12px 'JetBrains Mono', monospace; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+  .kpi-c2 .kpi-meta b { color: #3B82F6; font-weight: 700; }
+  [data-theme="dark"] .kpi-c2 .kpi-meta b { color: #93C5FD; }
+  .kpi-foot { font: 500 11.5px 'JetBrains Mono', monospace; color: var(--text-muted); }
+  .kpi-foot b { color: var(--brand); }
+  .kpi-c1 .kpi-spark { max-width: 100%; } .kpi-c1 .kpi-spark-plot, .kpi-c1 .kpi-spark svg { height: 40px; }
+  .kpi-grades { border: 0; padding: 0; }
+  .kpi-stack { height: 12px; }
+  .kpi-seg.perfect, .g-sw.perfect { background: #34D399; } .kpi-seg.good, .g-sw.good { background: #60A5FA; }
+  .kpi-seg.needimprove, .g-sw.needimprove { background: #FBBF24; } .kpi-seg.bad, .g-sw.bad { background: #F97316; }
+  .kpi-seg.poor, .g-sw.poor { background: #F43F5E; }
+  .kpi-seg { font-size: 0; }
+  .kpi-legend { grid-template-columns: repeat(5, minmax(0,1fr)); gap: 8px; margin-top: 12px; }
+  .kpi-legend li { flex-direction: column; justify-content: center; gap: 1px; padding: 8px 4px; text-align: center; border-radius: 10px; }
+  .kpi-legend .g-sw, .kpi-legend .lg-pct { display: none; }
+  .kpi-legend .lg-name { font-size: 10px; font-weight: 800; text-transform: uppercase; max-width: 100%; }
+  .kpi-legend b { font-size: 18px; }
+  .kpi-legend li::after { font-size: 9.5px; color: var(--text-muted); }
+  .lg-perfect { background: rgba(16,185,129,.12) !important; border-color: rgba(16,185,129,.3) !important; } .lg-perfect .lg-name, .lg-perfect b { color: #059669; }
+  .lg-good { background: rgba(59,130,246,.12) !important; border-color: rgba(59,130,246,.3) !important; } .lg-good .lg-name, .lg-good b { color: #2563EB; }
+  .lg-needimprove { background: rgba(245,158,11,.13) !important; border-color: rgba(245,158,11,.32) !important; } .lg-needimprove .lg-name, .lg-needimprove b { color: #B45309; }
+  .lg-bad { background: rgba(249,115,22,.13) !important; border-color: rgba(249,115,22,.32) !important; } .lg-bad .lg-name, .lg-bad b { color: #C2410C; }
+  .lg-poor { background: rgba(244,63,94,.12) !important; border-color: rgba(244,63,94,.3) !important; } .lg-poor .lg-name, .lg-poor b { color: #BE123C; }
+  [data-theme="dark"] .lg-perfect .lg-name, [data-theme="dark"] .lg-perfect b { color: #6EE7B7; }
+  [data-theme="dark"] .lg-good .lg-name, [data-theme="dark"] .lg-good b { color: #93C5FD; }
+  [data-theme="dark"] .lg-needimprove .lg-name, [data-theme="dark"] .lg-needimprove b { color: #FCD34D; }
+  [data-theme="dark"] .lg-bad .lg-name, [data-theme="dark"] .lg-bad b { color: #FDBA74; }
+  [data-theme="dark"] .lg-poor .lg-name, [data-theme="dark"] .lg-poor b { color: #FDA4AF; }
+  .lg-perfect::after { content: '(≥10 pts)'; } .lg-good::after { content: '(8–9.9)'; } .lg-needimprove::after { content: '(5–7.9)'; }
+  .lg-bad::after { content: '(3–4.9)'; } .lg-poor::after { content: '(<3 pts)'; }
+  .kpi-tiers { display: flex; justify-content: space-between; gap: 8px; flex-wrap: wrap; font: 500 11.5px 'JetBrains Mono', monospace; color: var(--text-muted); }
+  .kpi-tiers b.ok { color: #059669; } .kpi-tiers b.warn { color: #E11D48; }
+  [data-theme="dark"] .kpi-tiers b.ok { color: #34D399; } [data-theme="dark"] .kpi-tiers b.warn { color: #FB7185; }
+
+  /* Podium: avatar di atas kartu, 2-1-3 */
+  .podium { gap: 14px; padding: 36px 8px 4px; min-height: 250px; }
+  .podium-card { margin: 0; flex: 1 1 0; width: auto; max-width: 190px; padding: 40px 12px 14px; min-height: 150px !important; transform: none !important; border-radius: 14px; }
+  .podium-card.p1 { min-height: 168px !important; padding-top: 44px; }
+  .podium-card:hover, .podium-card.p2:hover, .podium-card.p3:hover { transform: translateY(-4px) !important; }
+  .avatar { width: 52px; height: 52px; font-size: 15px; top: -26px; border-width: 3px; }
+  .rank-badge { width: 22px; height: 22px; font-size: 10px; top: -4px; right: -6px; }
+  .podium-bar .pt, .p1 .podium-bar .pt { font-size: 24px; }
+  .podium-medal { font: 700 9px 'JetBrains Mono', monospace; padding: 3px 9px; }
+  .podium-card.p1::before { inset: -10px; }
+
+  /* Pilar kategori */
+  .pilar-list { display: flex; flex-direction: column; gap: 14px; }
+  .pilar-row .ph { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 5px; }
+  .pilar-row .ph span:first-child { font-weight: 600; color: var(--text-main); }
+  .pilar-row .ph span:last-child { font: 800 12.5px 'JetBrains Mono', monospace; }
+  .pilar-track { height: 8px; border-radius: 99px; background: rgba(100,116,139,.18); overflow: hidden; }
+  .pilar-track i { display: block; height: 100%; border-radius: 99px; }
+  .pilar-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); }
+  .pilar-foot b { color: var(--text-main); }
 </style>
 </head>
 <body class="gated">
@@ -1209,26 +1428,38 @@
   <div class="view-section active" data-view-section="dashboard">
 
     <!-- KPI hero: rata-rata poin, pembanding bulan lalu, tren, distribusi grade, dan pemilih periode -->
-    <section class="panel kpi-hero" id="kpiHero" aria-label="Ringkasan performa">
-      <div class="kpi-top">
-        <div class="kpi-label">Rata-rata poin <b id="kpiPeriodName"></b></div>
-        <div class="kpi-period">
-          <select id="dashMonthSelect" onchange="changeDashboardMonth(this.value)" aria-label="Pilih periode data Dashboard"><option value="current">Bulan berjalan</option></select>
-          <button id="dashBackBtn" class="kpi-back" onclick="changeDashboardMonth('current')"><i class="ti ti-arrow-back-up"></i>Bulan berjalan</button>
-          <span class="kpi-hint" id="dashPeriodHint"></span>
-        </div>
-      </div>
-      <div class="kpi-main">
+    <section class="kpi-row" id="kpiHero" aria-label="Ringkasan performa">
+      <div class="panel kpi-c1">
         <div>
-          <div class="kpi-big"><span id="statAvg">0</span><span class="kpi-delta none" id="kpiDelta"></span></div>
-          <div class="kpi-meta"><span><b id="statCount">0</b> ERO aktif</span><span id="lastUpdate"></span></div>
+          <div class="kpi-lbl">Rata-rata poin ERO <b id="kpiPeriodName"></b></div>
+          <div class="kpi-period" style="display:flex;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <select id="dashMonthSelect" onchange="changeDashboardMonth(this.value)" aria-label="Pilih periode data Dashboard"><option value="current">Bulan berjalan</option></select>
+            <button id="dashBackBtn" class="kpi-back" onclick="changeDashboardMonth('current')"><i class="ti ti-arrow-back-up"></i>Bulan berjalan</button>
+            <span class="kpi-hint" id="dashPeriodHint"></span>
+          </div>
+        </div>
+        <div>
+          <div class="kpi-big"><span id="statAvg">0</span><span class="kpi-unit">/ 10.00 pts</span></div>
+          <div style="margin-top:8px;"><span class="kpi-delta none" id="kpiDelta"></span></div>
         </div>
         <div class="kpi-spark" id="kpiSpark"></div>
+        <div class="kpi-foot">Target grade Good: <b>8.00 pts</b></div>
       </div>
-      <div class="kpi-grades">
-        <div class="kpi-grades-head">Distribusi grade</div>
-        <div class="kpi-stack" id="kpiStack" role="img"></div>
-        <ul class="kpi-legend" id="kpiLegend"></ul>
+      <div class="panel kpi-c2">
+        <div class="kpi-lbl">ERO Aktif</div>
+        <div>
+          <div class="kpi-big"><span id="statCount">0</span><span class="kpi-unit" id="kpiTotalEro"></span></div>
+          <div class="kpi-meta"><span id="kpiStoreCount"></span><span id="lastUpdate"></span></div>
+        </div>
+        <div class="kpi-foot" id="kpiActivePct"></div>
+      </div>
+      <div class="panel kpi-c3">
+        <div class="kpi-lbl" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">Komposisi Mutu Kinerja <span style="color:var(--brand);font-family:'JetBrains Mono',monospace;">Standar Good ≥ 8.0</span></div>
+        <div class="kpi-grades">
+          <div class="kpi-stack" id="kpiStack" role="img"></div>
+          <ul class="kpi-legend" id="kpiLegend"></ul>
+        </div>
+        <div class="kpi-tiers"><span>Healthy Tier (Good+): <b class="ok" id="kpiHealthy">0%</b></span><span>Watch Tier (Bad/Poor): <b class="warn" id="kpiWatch">0%</b></span></div>
       </div>
     </section>
     <div class="archive-note dash-archive-banner" id="dashArchiveBanner" data-archive-only></div>
@@ -1245,39 +1476,45 @@
     </div>
 
     <div class="dashboard-grid">
-      <div class="panel">
+      <div class="panel bx-7 o1">
         <h2><i class="ti ti-medal"></i>Top 3</h2>
         <div id="podium" class="podium"></div>
       </div>
 
-      <div class="panel" data-live-only>
+      <div class="panel bx-6 o5" data-live-only>
         <h2><i class="ti ti-bell"></i>Alert Otomatis</h2>
         <div id="alertPanel" class="alert-list"></div>
       </div>
 
-      <div class="panel">
+      <div class="panel bx-5 o2">
         <h2><i class="ti ti-alert-triangle"></i>Bottom 3 — Perlu Perhatian</h2>
         <div id="watchlist"></div>
       </div>
 
-      <div class="panel" data-live-only>
+      <div class="panel bx-6 o6" data-live-only>
         <h2><i class="ti ti-bolt"></i>Yesterday vs Today</h2>
         <div id="yesterdayToday" class="insight-grid"></div>
       </div>
 
-      <div class="panel dashboard-grid-full" data-live-only>
+      <div class="panel o7 dashboard-grid-full" data-live-only>
         <h2><i class="ti ti-arrows-up-down"></i>Most Improved &amp; Biggest Drop</h2>
         <div id="moversPanel" class="insight-grid"></div>
       </div>
 
-      <div class="panel dashboard-grid-full">
+      <div class="panel bx-8 o3 dashboard-grid-full">
         <h2><i class="ti ti-chart-line"></i>Tren &amp; Distribusi Grade</h2>
         <div id="dashboardCharts"></div>
       </div>
 
-      <div class="panel dashboard-grid-full">
+      <div class="panel o8 dashboard-grid-full">
         <h2><i class="ti ti-list-details"></i>Papan Peringkat Lengkap<span id="dashLbSuffix"></span></h2>
         <div id="leaderboard"></div>
+      </div>
+
+      <div class="panel bx-4 o4">
+        <h2><i class="ti ti-layout-grid"></i>Pilar Kategori Poin</h2>
+        <div class="pilar-list" id="pilarList"></div>
+        <div class="pilar-foot" id="pilarFoot"></div>
       </div>
 
       <!-- Khusus tampilan arsip: ringkasan store & data lengkap per ERO -->
@@ -1921,6 +2158,7 @@ function render(){
   const avg=dn?(dActive.reduce((s,r)=>s+r.total,0)/dn):0;
   document.getElementById('statAvg').textContent=avg.toFixed(2);
   renderKpiHero(dActive,dsv);
+  renderBentoExtras(dActive,dsv);
   document.getElementById('lastUpdate').textContent=dsv.archive?'':(lastUpdateLabel?('Update terakhir: '+lastUpdateLabel):'');
   const lbSfx=document.getElementById('dashLbSuffix'); if(lbSfx) lbSfx.textContent=dsv.archive?(' — '+monthLabel(dsv.month)):'';
 
@@ -2084,7 +2322,24 @@ function renderKpiHero(dActive,dsv){
     stack.setAttribute('aria-label','Distribusi grade: '+GRADE_ORDER.map(g=>`${g} ${counts[g]}`).join(', '));
   }
   const legend=document.getElementById('kpiLegend');
-  if(legend) legend.innerHTML=GRADE_ORDER.map(g=>`<li class="${counts[g]?'':'zero'}"><i class="g-sw ${gradeClass(g)}"></i><span class="lg-name">${g}</span><b>${counts[g]}</b><span class="lg-pct">${pctOf(g)}%</span></li>`).join('');
+  if(legend) legend.innerHTML=GRADE_ORDER.map(g=>`<li class="${counts[g]?'':'zero'} lg-${gradeClass(g)}"><i class="g-sw ${gradeClass(g)}"></i><span class="lg-name">${g}</span><b>${counts[g]}</b><span class="lg-pct">${pctOf(g)}%</span></li>`).join('');
+}
+
+function renderBentoExtras(dActive,dsv){
+  const set=(id,t)=>{const e=document.getElementById(id); if(e) e.textContent=t;};
+  const n=dActive.length, total=dsv.archive?n:rows.length;
+  set('kpiTotalEro','/ '+total+' terdaftar');
+  set('kpiStoreCount',new Set(dActive.map(r=>r.store).filter(Boolean)).size+' Toko');
+  set('kpiActivePct',total?((n/total*100).toFixed(1)+'% ERO aktif'):'');
+  const c=g=>dActive.filter(r=>calcGrade(r.total)===g).length, pc=v=>n?Math.round(v/n*100)+'%':'0%';
+  set('kpiHealthy',pc(c('Perfect')+c('Good'))); set('kpiWatch',pc(c('Bad')+c('Poor')));
+  const avgOf=fn=>{const v=dActive.map(fn).filter(x=>typeof x==='number'&&isFinite(x)); return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
+  const P=[['Device Selling','device','#F59E0B'],['Accessories','acc','#60A5FA'],['Operator','operator','#34D399'],['Boltech Protection','boltech','#A78BFA']];
+  const list=document.getElementById('pilarList');
+  if(list) list.innerHTML=P.map(([lb,k,col])=>{const v=avgOf(r=>r.est&&r.est[k]); return v===null?`<div class="pilar-row"><div class="ph"><span>${lb}</span><span style="color:var(--text-muted)">–</span></div><div class="pilar-track"></div></div>`:`<div class="pilar-row"><div class="ph"><span>${lb}</span><span style="color:${col}">${(v*100).toFixed(1)}%</span></div><div class="pilar-track"><i style="width:${Math.min(100,v*100)}%;background:${col}"></i></div></div>`;}).join('');
+  const a=avgOf(r=>r.ach&&r.ach.arAcc), b=avgOf(r=>r.ach&&r.ach.arBoltech);
+  const foot=document.getElementById('pilarFoot');
+  if(foot) foot.innerHTML=`<span>Attach Rate Acc: <b>${a===null?'–':a.toFixed(2)}</b></span><span>AR Boltech: <b>${b===null?'–':(b*100).toFixed(1)+'%'}</b></span>`;
 }
 
 function renderDashboardMonthPicker(){
