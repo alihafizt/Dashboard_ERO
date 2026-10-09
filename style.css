@@ -1353,3 +1353,34 @@
   .pilar-track i { display: block; height: 100%; border-radius: 99px; }
   .pilar-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); }
   .pilar-foot b { color: var(--text-main); }
+
+/* ---- Perbaikan kontras dark mode (pill grade & badge perubahan rank) ----
+   Di dark mode pill grade memakai latar solid (var(--g-*)), tetapi warna teksnya
+   tertimpa aturan teks pastel di atas sehingga pastel-di-atas-pastel. Dikembalikan
+   ke warna "ink" gelap/putih yang sudah dirancang untuk tiap latar. */
+[data-theme="dark"] .grade.perfect { color: var(--g-perfect-ink); }
+[data-theme="dark"] .grade.good { color: var(--g-good-ink); }
+[data-theme="dark"] .grade.needimprove { color: var(--g-need-ink); }
+[data-theme="dark"] .grade.bad { color: var(--g-bad-ink); }
+[data-theme="dark"] .grade.poor { color: var(--g-poor-ink); }
+
+/* Badge perubahan rank: teks sudah terang di dark mode, tetapi latar masih pastel terang */
+[data-theme="dark"] .rank-delta.up { background: rgba(52, 211, 153, 0.16); }
+[data-theme="dark"] .rank-delta.down { background: rgba(248, 113, 113, 0.16); }
+
+/* ---- Perbaikan podium Top 3: juara 1 harus paling tinggi ----
+   Sebelumnya kartu rata di bawah (flex-end) dengan tinggi mengikuti isi, sehingga nama
+   panjang yang membungkus membuat kartu juara 1 justru paling pendek/rendah.
+   Sekarang semua kartu sama tinggi sampai dasar, dan puncaknya bertingkat 1 > 2 > 3. */
+.podium { align-items: stretch; }
+.podium-card { min-height: 0 !important; }
+.podium-card.p1 { margin-top: 0; min-height: 190px !important; }
+.podium-card.p2 { margin-top: 28px; }
+.podium-card.p3 { margin-top: 44px; }
+
+/* ---- Perbaikan daftar dropdown di dark mode ----
+   Teks <select> sudah terang, tetapi daftar pilihannya (option) memakai latar putih bawaan
+   browser sehingga teks terang di atas putih tidak terbaca. */
+[data-theme="dark"] select { color-scheme: dark; }
+[data-theme="dark"] select option,
+[data-theme="dark"] select optgroup { background-color: #1E293B; color: #F8FAFC; }
