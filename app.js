@@ -921,7 +921,19 @@ function openPersonModal(name){
     chartEl.innerHTML=kpis+breakdown+targetProgress+focusBox+(points.length>=2?buildLineChartSvg(points.map(p=>p.label),[{name, color:'#CA8A04', values:points.map(p=>p.total)}],{height:200}):'');
   } else chartEl.innerHTML='';
   if(points.length===0) listEl.innerHTML='<div class="empty"><i class="ti ti-chart-line"></i>Belum ada data histori untuk orang ini.</div>';
-  else listEl.innerHTML=[...points].reverse().map(p=>`<div class="modal-list-item"><span>${escapeHtml(p.label)}</span><span><b>${p.total.toFixed(2)}</b> · ${p.grade}</span></div>`).join('');
+  else {
+    window._phPoints=[...points].reverse();
+    window._phExpanded=!!window._phExpanded && window._phPoints.length>0;
+    const renderPH=()=>{
+      const all=window._phPoints, LIM=8, show=window._phExpanded?all:all.slice(0,LIM);
+      const rows=show.map(p=>`<div class="hist-row"><span class="hist-date">${escapeHtml(p.label)}</span><span class="hist-meta"><b class="hist-pt">${p.total.toFixed(2)}</b><span class="grade ${String(p.grade).toLowerCase().replace(/\s+/g,'')}">${escapeHtml(p.grade)}</span></span></div>`).join('');
+      const more=all.length>LIM?`<button class="hist-toggle" onclick="window._phExpanded=!window._phExpanded;window._phRender&&window._phRender()">${window._phExpanded?'Tutup':'Lihat semua ('+all.length+')'}</button>`:'';
+      listEl.innerHTML=rows+more;
+    };
+    window._phRender=renderPH;
+    window._phExpanded=false;
+    renderPH();
+  }
   document.getElementById('personModal').style.display='flex';
 }
 function closePersonModal(){ document.getElementById('personModal').style.display = 'none'; }
