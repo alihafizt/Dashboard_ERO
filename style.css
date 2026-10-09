@@ -8,6 +8,15 @@
     --text-main: #0F172A;
     --text-muted: #64748B;
     --border-light: rgba(226, 232, 240, 0.6);
+    --tbl-head: #F8FAFC; --tbl-line: #E2E8F0; --tbl-row-line: #F1F5F9; --tbl-hover: rgba(248, 250, 252, 0.8);
+    --lb-m-bg: rgba(255, 255, 255, 0.55);
+    --rd-up-bg: #DCFCE7; --rd-up-fg: #15803D; --rd-down-bg: #FEE2E2; --rd-down-fg: #B91C1C;
+    --rd-same-bg: #F1F5F9; --rd-same-fg: #64748B; --rd-new-bg: #EFF6FF; --rd-new-fg: #2563EB;
+    --gr-perfect-bg: rgba(16,185,129,.14); --gr-perfect-fg: #047857; --gr-perfect-bd: rgba(16,185,129,.30);
+    --gr-good-bg: rgba(59,130,246,.14); --gr-good-fg: #1D4ED8; --gr-good-bd: rgba(59,130,246,.30);
+    --gr-need-bg: rgba(245,158,11,.16); --gr-need-fg: #B45309; --gr-need-bd: rgba(245,158,11,.32);
+    --gr-bad-bg: rgba(249,115,22,.15); --gr-bad-fg: #C2410C; --gr-bad-bd: rgba(249,115,22,.32);
+    --gr-poor-bg: rgba(244,63,94,.14); --gr-poor-fg: #BE123C; --gr-poor-bd: rgba(244,63,94,.30);
     --brand: #F5B400;
     --brand-hover: #D99E00;
     --brand-light: #FFFBEB;
@@ -259,12 +268,12 @@
   /* Tables */
   .table-scroll { max-height: 70vh; overflow-y: auto; overflow-x: auto; border-radius: 18px; background: rgba(255,255,255,0.7); box-shadow: inset 0 0 0 1px #E2E8F0; }
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13.5px; }
-  thead th { position: sticky; top: 0; background: #F8FAFC; z-index: 2; padding: 14px 16px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; border-bottom: 2px solid #E2E8F0; }
-  th, td { padding: 14px 16px; text-align: center; border-bottom: 1px solid #F1F5F9; }
+  thead th { position: sticky; top: 0; background: var(--tbl-head); z-index: 5; padding: 14px 16px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; border-bottom: 2px solid var(--tbl-line); }
+  th, td { padding: 14px 16px; text-align: center; border-bottom: 1px solid var(--tbl-row-line); }
   td.name { text-align: left; font-weight: 600; }
   td.name input, td.store input { width: 100%; text-align: left; }
   tbody tr { transition: background 0.2s; }
-  tbody tr:hover { background: rgba(248,250,252,0.8); }
+  tbody tr:hover { background: var(--tbl-hover); }
   .rm { background: none; border: none; color: #94A3B8; cursor: pointer; font-size: 18px; padding: 4px 8px; box-shadow: none; }
   .rm:hover { color: var(--danger); background: transparent; transform: none; }
 
@@ -366,10 +375,10 @@
 
   .rank-delta { display: inline-flex; align-items: center; gap: 2px; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; padding: 5px 9px; border-radius: 20px; white-space: nowrap; }
   .rank-delta i { font-size: 12px; }
-  .rank-delta.up { background: #DCFCE7; color: #15803D; }
-  .rank-delta.down { background: #FEE2E2; color: #B91C1C; }
-  .rank-delta.same { background: #F1F5F9; color: #64748B; }
-  .rank-delta.new { background: #EFF6FF; color: #2563EB; }
+  .rank-delta.up { background: var(--rd-up-bg); color: var(--rd-up-fg); }
+  .rank-delta.down { background: var(--rd-down-bg); color: var(--rd-down-fg); }
+  .rank-delta.same { background: var(--rd-same-bg); color: var(--rd-same-fg); }
+  .rank-delta.new { background: var(--rd-new-bg); color: var(--rd-new-fg); }
 
   @media(max-width: 900px) and (min-width: 761px) {
     #leaderboard { overflow-x: auto; }
@@ -385,7 +394,7 @@
       display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
       min-width: 0; width: 100%;
       border: 1px solid var(--panel-border); border-radius: 16px;
-      padding: 12px 14px; margin-bottom: 10px; background: rgba(255,255,255,0.55);
+      padding: 12px 14px; margin-bottom: 10px; background: var(--lb-m-bg);
     }
     .leaderboard-row:hover { transform: none; }
     .lb-rank {
@@ -403,12 +412,6 @@
   }
 
   /* Grade pill */
-  .grade { font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; display: inline-block; }
-  .grade.perfect { background: var(--success); color: #FFFFFF; }
-  .grade.good { background: var(--good); color: #1A2E05; }
-  .grade.needimprove { background: var(--warning); color: #FFFFFF; }
-  .grade.bad { background: var(--bad); color: #FFFFFF; }
-  .grade.poor { background: var(--danger); color: #FFFFFF; }
 
   /* Watchlist & alerts */
   .watch-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; background: var(--danger-light); border-radius: 14px; margin-bottom: 10px; border: 1px solid #FECACA; }
@@ -682,6 +685,10 @@
     --text-main: #F8FAFC;
     --text-muted: #94A3B8;
     --border-light: #334155;
+    --tbl-head: #1E293B; --tbl-line: #334155; --tbl-row-line: #334155; --tbl-hover: rgba(255, 255, 255, 0.05);
+    --lb-m-bg: rgba(255, 255, 255, 0.04);
+    --rd-up-bg: rgba(52, 211, 153, 0.16); --rd-up-fg: #86EFAC; --rd-down-bg: rgba(248, 113, 113, 0.16); --rd-down-fg: #FCA5A5;
+    --rd-same-bg: rgba(255, 255, 255, 0.06); --rd-same-fg: #94A3B8; --rd-new-bg: rgba(96, 165, 250, 0.15); --rd-new-fg: #93C5FD;
   }
 
   [data-theme="dark"] body {
@@ -741,15 +748,6 @@
     border-color: var(--border-light);
     color: var(--text-main);
   }
-  [data-theme="dark"] thead th {
-    background: var(--panel-bg);
-  }
-  [data-theme="dark"] th, [data-theme="dark"] td {
-    border-color: var(--border-light);
-  }
-  [data-theme="dark"] tbody tr:hover td {
-    background: rgba(255, 255, 255, 0.05);
-  }
 
   [data-theme="dark"] button:not(.primary):not(.danger) {
     background: var(--panel-bg);
@@ -780,9 +778,6 @@
     --brand-light: rgba(245, 180, 0, 0.14);
   }
   /* Pill grade tertentu pakai teks putih di atas bg terang → ganti tinta gelap biar tetap kontras */
-  [data-theme="dark"] .grade.needimprove,
-  [data-theme="dark"] .grade.bad,
-  [data-theme="dark"] .grade.poor { color: #1F1005; }
 
   /* Kartu podium & area tabel: sebelumnya bg putih hardcode, tidak ikut tema */
   [data-theme="dark"] .podium-card {
@@ -844,7 +839,6 @@
   [data-theme="dark"] .watch-name,
   [data-theme="dark"] .alert-item.critical,
   [data-theme="dark"] .alert-item.critical div,
-  [data-theme="dark"] .rank-delta.down,
   [data-theme="dark"] .snap-trend.down,
   [data-theme="dark"] .delta-down,
   [data-theme="dark"] .snap-mover-card.drop .mv-delta { color: #FCA5A5 !important; }
@@ -855,13 +849,10 @@
   [data-theme="dark"] .focus-box div { color: #FDE68A; }
   [data-theme="dark"] .alert-item.good,
   [data-theme="dark"] .alert-item.good div,
-  [data-theme="dark"] .rank-delta.up,
   [data-theme="dark"] .snap-trend.up,
   [data-theme="dark"] .delta-up,
   [data-theme="dark"] .active-badge,
   [data-theme="dark"] .snap-mover-card.gain .mv-delta { color: #86EFAC !important; }
-  [data-theme="dark"] .rank-delta.new { background: rgba(96,165,250,0.15); color: #93C5FD !important; }
-  [data-theme="dark"] .rank-delta.same,
   [data-theme="dark"] .snap-trend.same,
   [data-theme="dark"] .delta-same,
   [data-theme="dark"] .inactive-badge { color: var(--text-muted) !important; background: rgba(255,255,255,0.06); }
@@ -1067,16 +1058,11 @@
   .grade.needimprove::before, .g-sw.needimprove::before { content: '↗'; }
   .grade.bad::before, .g-sw.bad::before { content: '!'; }
   .grade.poor::before, .g-sw.poor::before { content: '!!'; }
-  .grade.perfect, .g-sw.perfect, .kpi-seg.perfect { background: var(--g-perfect); color: var(--g-perfect-ink); }
-  .grade.good, .g-sw.good, .kpi-seg.good { background: var(--g-good); color: var(--g-good-ink); }
-  .grade.needimprove, .g-sw.needimprove, .kpi-seg.needimprove { background: var(--g-need); color: var(--g-need-ink); }
-  .grade.bad, .g-sw.bad, .kpi-seg.bad { background: var(--g-bad); color: var(--g-bad-ink); }
-  .grade.poor, .g-sw.poor, .kpi-seg.poor { background: var(--g-poor); color: var(--g-poor-ink); }
-  [data-theme="dark"] .grade.perfect { background: var(--g-perfect); color: var(--g-perfect-ink); }
-  [data-theme="dark"] .grade.good { background: var(--g-good); color: var(--g-good-ink); }
-  [data-theme="dark"] .grade.needimprove { background: var(--g-need); color: var(--g-need-ink); }
-  [data-theme="dark"] .grade.bad { background: var(--g-bad); color: var(--g-bad-ink); }
-  [data-theme="dark"] .grade.poor { background: var(--g-poor); color: var(--g-poor-ink); }
+  .g-sw.perfect, .kpi-seg.perfect { background: var(--g-perfect); color: var(--g-perfect-ink); }
+  .g-sw.good, .kpi-seg.good { background: var(--g-good); color: var(--g-good-ink); }
+  .g-sw.needimprove, .kpi-seg.needimprove { background: var(--g-need); color: var(--g-need-ink); }
+  .g-sw.bad, .kpi-seg.bad { background: var(--g-bad); color: var(--g-bad-ink); }
+  .g-sw.poor, .kpi-seg.poor { background: var(--g-poor); color: var(--g-poor-ink); }
   .lb-fill.perfect { background: var(--g-perfect); } .lb-fill.good { background: var(--g-good); }
   .lb-fill.needimprove { background: var(--g-need); } .lb-fill.bad { background: var(--g-bad); } .lb-fill.poor { background: var(--g-poor); }
   .grade-bar-val { color: var(--text-main); }
@@ -1245,18 +1231,7 @@
   [data-theme="dark"] .lb-categories .point-category-grid span { background: rgba(255,255,255,.05); color: #CBD5E1; }
   [data-theme="dark"] .lb-store, [data-theme="dark"] .lb-name .lb-store { color: #94A3B8; }
   thead th { font-family: 'JetBrains Mono', monospace; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
-  [data-theme="dark"] thead th { background: rgba(255,255,255,.03); color: #94A3B8; }
 
-  /* Grade jadi pill tembus pandang */
-  .grade { font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; border: 1px solid transparent; }
-  .grade.perfect { background: rgba(16,185,129,.14); color: #047857; border-color: rgba(16,185,129,.30); }
-  .grade.good { background: rgba(59,130,246,.14); color: #1D4ED8; border-color: rgba(59,130,246,.30); }
-  .grade.needimprove { background: rgba(245,158,11,.16); color: #B45309; border-color: rgba(245,158,11,.32); }
-  .grade.bad { background: rgba(249,115,22,.15); color: #C2410C; border-color: rgba(249,115,22,.32); }
-  .grade.poor { background: rgba(244,63,94,.14); color: #BE123C; border-color: rgba(244,63,94,.30); }
-  [data-theme="dark"] .grade.perfect { color: #6EE7B7; } [data-theme="dark"] .grade.good { color: #93C5FD; }
-  [data-theme="dark"] .grade.needimprove { color: #FCD34D; } [data-theme="dark"] .grade.bad { color: #FDBA74; }
-  [data-theme="dark"] .grade.poor { color: #FDA4AF; }
 
   /* Watchlist, alert, insight */
   .watch-row { background: rgba(244,63,94,.08); border-color: rgba(244,63,94,.25); border-radius: 12px; }
@@ -1354,19 +1329,8 @@
   .pilar-foot { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); }
   .pilar-foot b { color: var(--text-main); }
 
-/* ---- Perbaikan kontras dark mode (pill grade & badge perubahan rank) ----
-   Di dark mode pill grade memakai latar solid (var(--g-*)), tetapi warna teksnya
-   tertimpa aturan teks pastel di atas sehingga pastel-di-atas-pastel. Dikembalikan
-   ke warna "ink" gelap/putih yang sudah dirancang untuk tiap latar. */
-[data-theme="dark"] .grade.perfect { color: var(--g-perfect-ink); }
-[data-theme="dark"] .grade.good { color: var(--g-good-ink); }
-[data-theme="dark"] .grade.needimprove { color: var(--g-need-ink); }
-[data-theme="dark"] .grade.bad { color: var(--g-bad-ink); }
-[data-theme="dark"] .grade.poor { color: var(--g-poor-ink); }
 
 /* Badge perubahan rank: teks sudah terang di dark mode, tetapi latar masih pastel terang */
-[data-theme="dark"] .rank-delta.up { background: rgba(52, 211, 153, 0.16); }
-[data-theme="dark"] .rank-delta.down { background: rgba(248, 113, 113, 0.16); }
 
 /* ---- Perbaikan podium Top 3: juara 1 harus paling tinggi ----
    Sebelumnya kartu rata di bawah (flex-end) dengan tinggi mengikuti isi, sehingga nama
@@ -1385,23 +1349,6 @@
 [data-theme="dark"] select option,
 [data-theme="dark"] select optgroup { background-color: #1E293B; color: #F8FAFC; }
 
-/* ---- Perbaikan header tabel sticky di dark mode ----
-   Header tabel dibuat "sticky" agar tetap terlihat saat digulir, tetapi di dark mode latarnya
-   transparan (rgba 0.03), sehingga baris yang digulir tembus dan menutupi judul kolom. */
-[data-theme="dark"] thead th {
-  background: #1E293B;
-  box-shadow: 0 1px 0 var(--border-light);
-}
-
-/* ---- Perbaikan baris tabel saat kursor di atasnya (dark mode) ----
-   Aturan dasar memberi latar terang (rgba 248,250,252) pada baris yang di-hover; di dark mode
-   latar terang itu masih terlihat di belakang teks, sehingga tulisan jadi tidak terbaca. */
-[data-theme="dark"] tbody tr:hover { background: rgba(255, 255, 255, 0.05); }
-[data-theme="dark"] tbody tr:hover td { background: transparent; }
-
-/* ---- Judul tabel sticky harus berada di atas baris yang digulir ---- */
-[data-theme="dark"] thead th { z-index: 5; }
-[data-theme="dark"] thead tr { background: #1E293B; }
 
 /* ---- Riwayat poin di popup ERO dibuat ringkas ----
    Tiap baris: tanggal di kiri, poin dan grade (pill berwarna) di kanan. */
@@ -1416,3 +1363,32 @@
 #personModalList { max-height: none; overflow: visible; }
 .hist-toggle { display: block; width: 100%; margin-top: 12px; padding: 9px; border-radius: 12px; border: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-size: 12.5px; font-weight: 700; cursor: pointer; }
 .hist-toggle:hover { color: var(--text-main); border-color: var(--brand); transform: none; box-shadow: none; }
+
+/* ---- Badge naik/turun rank: warna dari token (terang di :root, gelap di [data-theme="dark"]) ---- */
+[data-theme="dark"] .rank-delta.up { color: var(--rd-up-fg); }
+[data-theme="dark"] .rank-delta.down { color: var(--rd-down-fg); }
+[data-theme="dark"] .rank-delta.same { color: var(--rd-same-fg); background: var(--rd-same-bg); }
+[data-theme="dark"] .rank-delta.new { color: var(--rd-new-fg); background: var(--rd-new-bg); }
+
+/* ---- Pill grade: satu sumber. Terang = pill transparan; gelap = latar solid dari --g-* ---- */
+.grade { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; border-radius: var(--r-chip); font-family: 'JetBrains Mono', monospace; font-size: 10.5px; font-weight: 700; letter-spacing: .01em; border: 1px solid transparent; }
+.grade.perfect { background: var(--gr-perfect-bg); color: var(--gr-perfect-fg); border-color: var(--gr-perfect-bd); }
+.grade.good { background: var(--gr-good-bg); color: var(--gr-good-fg); border-color: var(--gr-good-bd); }
+.grade.needimprove { background: var(--gr-need-bg); color: var(--gr-need-fg); border-color: var(--gr-need-bd); }
+.grade.bad { background: var(--gr-bad-bg); color: var(--gr-bad-fg); border-color: var(--gr-bad-bd); }
+.grade.poor { background: var(--gr-poor-bg); color: var(--gr-poor-fg); border-color: var(--gr-poor-bd); }
+[data-theme="dark"] .grade.perfect { background: var(--g-perfect); color: var(--g-perfect-ink); }
+[data-theme="dark"] .grade.good { background: var(--g-good); color: var(--g-good-ink); }
+[data-theme="dark"] .grade.needimprove { background: var(--g-need); color: var(--g-need-ink); }
+[data-theme="dark"] .grade.bad { background: var(--g-bad); color: var(--g-bad-ink); }
+[data-theme="dark"] .grade.poor { background: var(--g-poor); color: var(--g-poor-ink); }
+
+/* ---- Menu bawah di HP: label tidak lagi saling menumpuk ----
+   Sebelumnya 7 menu dipaksa berbagi lebar layar yang sama, sehingga label panjang
+   (Dashboard, Data ERO, Data Toko, Kelola Data) bertabrakan. Sekarang setiap menu
+   punya lebar minimum sendiri, dan deretan menu bisa digeser ke samping. */
+@media (max-width: 900px) {
+  .app-sidebar nav { justify-content: flex-start; gap: 4px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .app-sidebar nav::-webkit-scrollbar { display: none; }
+  .nav-item { flex: 0 0 auto; min-width: 66px; padding: 7px 10px; font-size: 10px; }
+}
