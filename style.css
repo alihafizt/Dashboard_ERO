@@ -1392,3 +1392,15 @@
   .app-sidebar nav::-webkit-scrollbar { display: none; }
   .nav-item { flex: 0 0 auto; min-width: 66px; padding: 7px 10px; font-size: 10px; }
 }
+
+/* ---- Kartu di tampilan HP (mode gelap): latar putih transparan dibuat gelap ----
+   Di HP, baris tabel ERO/Toko berubah menjadi kartu, dan kartu ringkasan toko memakai latar
+   putih transparan yang tidak diberi versi gelap. Hasilnya, di dark mode kartu tampak abu-abu
+   dan teks di atasnya ikut pudar. Mode terang tidak diubah. */
+[data-theme="dark"] #dataTable tr,
+[data-theme="dark"] #storeTable tr,
+[data-theme="dark"] .store-pair-card,
+[data-theme="dark"] .score-card {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--border-light);
+}
