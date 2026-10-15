@@ -1883,6 +1883,7 @@ function renderGradeMonthPanel(){
         <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
         <div class="gm-sub">Mengikuti filter store di atas. Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini.</div>
       </div>
+      <div id="gmDetail"></div>
       <div class="gm-search-row"><i class="ti ti-search"></i><input type="search" id="gmSearch" class="gm-search" placeholder="Cari nama ERO..." autocomplete="off"></div>
       <div id="gmBody"></div>`;
     sec.appendChild(el);
@@ -1930,7 +1931,7 @@ function renderGmBody(){
       const g=calcGrade(t);
       return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${escapeHtml(g)} ${t.toFixed(2)}</span></td>`;
     }).join('');
-    return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openPersonModal(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
+    return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openGmDetail('ero', this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada ERO yang cocok.</td></tr>`;
 
   const ORDER=['Perfect','Good','Need Improve','Bad','Poor'];
@@ -1971,7 +1972,7 @@ function renderGmBody(){
     }).join('');
     const clickable = s.name!=='(tanpa toko)';
     const nameCell = clickable
-      ? `<button type="button" class="gm-name" data-name="${escapeHtml(s.name)}" onclick="openStoreModal(this.dataset.name)">${escapeHtml(s.name)}</button>`
+      ? `<button type="button" class="gm-name" data-name="${escapeHtml(s.name)}" onclick="openGmDetail('store', this.dataset.name)">${escapeHtml(s.name)}</button>`
       : escapeHtml(s.name);
     return `<tr><td class="gm-name-col">${nameCell}</td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada toko yang cocok.</td></tr>`;
@@ -2002,4 +2003,119 @@ function renderGmBody(){
         <tbody>${storeRows}</tbody>
       </table>
     </div>`;
+}
+
+// ---- Detail achievement per bulan (ERO atau toko), dipicu dari klik nama di panel Grade ERO per Bulan ----
+let gmDetail=null;
+const GMD_LABELS={device:'Device',acc:'Acc',operator:'Operator',boltech:'Boltech',arAcc:'AR Acc',arBoltech:'AR Boltech'};
+function gmMonthKeys(){
+  const cur=getCurrentMonthKey();
+  return [...getDashboardArchiveMonths().filter(k=>k!==cur).sort(), cur];
+}
+function gmRowsFor(k){ return k===getCurrentMonthKey() ? rows : getStoreRowsForMonth(k); }
+function gmPctCell(p){
+  if(p===null || p===undefined || !isFinite(p)) return '<td><span class="gm-empty">–</span></td>';
+  const v=p*100, cls=v>=100?'ontrack':v>=80?'warn':'behind';
+  return `<td><b class="tp-${cls}">${v.toFixed(0)}%</b></td>`;
+}
+function openGmDetail(type,name){
+  if(!name) return;
+  const keys=gmMonthKeys();
+  gmDetail={type,name,from:keys[Math.max(0,keys.length-3)],to:keys[keys.length-1]};
+  renderGmDetail(true);
+}
+function setGmDetailRange(which,val){
+  if(!gmDetail) return;
+  gmDetail[which]=val;
+  renderGmDetail(false);
+}
+function closeGmDetail(){
+  gmDetail=null;
+  const el=document.getElementById('gmDetail'); if(el) el.innerHTML='';
+}
+function gmOpenFull(){
+  if(!gmDetail) return;
+  if(gmDetail.type==='ero') openPersonModal(gmDetail.name);
+  else openStoreModal(gmDetail.name);
+}
+function renderGmDetail(scroll){
+  const el=document.getElementById('gmDetail');
+  if(!el || !gmDetail) return;
+  const keys=gmMonthKeys(), cur=getCurrentMonthKey();
+  let i1=keys.indexOf(gmDetail.from), i2=keys.indexOf(gmDetail.to);
+  if(i1>i2){ [i1,i2]=[i2,i1]; }
+  const sel=keys.slice(i1, i2+1);
+  const opts=(v)=>keys.map(k=>`<option value="${escapeAttr(k)}" ${k===v?'selected':''}>${escapeHtml(gmMonthLabel(k))}</option>`).join('');
+  const fieldHead=fields.map(f=>`<th>${GMD_LABELS[f]||f}</th>`).join('');
+  const isEro=gmDetail.type==='ero';
+  let headCols, bodyHtml, chips=[];
+
+  if(isEro){
+    headCols=`<th>Bulan</th><th>Poin</th><th>Grade</th>${fieldHead}`;
+    const data=sel.map(k=>({k, r:gmRowsFor(k).find(x=>x.name===gmDetail.name && x.active!==false)}));
+    bodyHtml=data.map(({k,r})=>{
+      const hi=k===cur?' class="gmd-hi"':'';
+      if(!r) return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td colspan="${2+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
+      const total=gmTotal(r), g=calcGrade(total);
+      const pcts=fields.map(f=>{
+        const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
+        return t>0 ? a/t : null;
+      });
+      return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td><b>${total.toFixed(2)}</b></td><td><span class="grade ${gradeClass(g)}">${escapeHtml(g)}</span></td>${pcts.map(gmPctCell).join('')}</tr>`;
+    }).join('');
+    const pts=data.filter(d=>d.r).map(d=>gmTotal(d.r));
+    const avg=pts.length? pts.reduce((a,b)=>a+b,0)/pts.length : null;
+    chips.push(`<div class="gmd-chip"><span>Rata-rata poin</span><b>${avg===null?'–':avg.toFixed(2)}</b></div>`);
+    if(pts.length>=2){
+      const d=pts[pts.length-1]-pts[0];
+      chips.push(`<div class="gmd-chip"><span>Perubahan poin</span><b class="${d>=0?'tp-ontrack':'tp-behind'}">${d>=0?'+':''}${d.toFixed(2)}</b></div>`);
+    }
+    chips.push(`<div class="gmd-chip"><span>Bulan terdata</span><b>${pts.length} / ${sel.length}</b></div>`);
+  } else {
+    headCols=`<th>Bulan</th><th>Rata-rata poin</th><th>Jumlah ERO</th><th>Grade</th>${fieldHead}`;
+    bodyHtml=sel.map(k=>{
+      const hi=k===cur?' class="gmd-hi"':'';
+      const src=gmRowsFor(k);
+      const members=src.filter(r=>r.active!==false && (r.store||'(tanpa toko)')===gmDetail.name);
+      if(!members.length) return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td colspan="${3+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
+      const avg=members.reduce((a,r)=>a+gmTotal(r),0)/members.length;
+      const agg=computeStoreTargetAgg(gmDetail.name, src);
+      return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td><b>${avg.toFixed(2)}</b></td><td>${members.length}</td><td><span class="grade ${gradeClass(calcGrade(avg))}">${escapeHtml(calcGrade(avg))}</span></td>${fields.map(f=>gmPctCell(agg.est[f])).join('')}</tr>`;
+    }).join('');
+    const avgs=sel.map(k=>{
+      const m=gmRowsFor(k).filter(r=>r.active!==false && (r.store||'(tanpa toko)')===gmDetail.name);
+      return m.length? m.reduce((a,r)=>a+gmTotal(r),0)/m.length : null;
+    }).filter(v=>v!==null);
+    const avgAll=avgs.length? avgs.reduce((a,b)=>a+b,0)/avgs.length : null;
+    chips.push(`<div class="gmd-chip"><span>Rata-rata periode</span><b>${avgAll===null?'–':avgAll.toFixed(2)}</b></div>`);
+    if(avgs.length>=2){
+      const d=avgs[avgs.length-1]-avgs[0];
+      chips.push(`<div class="gmd-chip"><span>Perubahan poin</span><b class="${d>=0?'tp-ontrack':'tp-behind'}">${d>=0?'+':''}${d.toFixed(2)}</b></div>`);
+    }
+  }
+
+  el.innerHTML=`
+    <div class="gmd-box">
+      <div class="gmd-top">
+        <div>
+          <div class="gmd-title"><i class="ti ti-${isEro?'user':'building-store'}"></i> ${escapeHtml(gmDetail.name)}</div>
+          <div class="gmd-sub">${isEro?'Detail achievement ERO per bulan':'Detail achievement toko per bulan'}</div>
+        </div>
+        <button type="button" class="gmd-close" onclick="closeGmDetail()" aria-label="Tutup"><i class="ti ti-x"></i></button>
+      </div>
+      <div class="gmd-controls">
+        <label>Dari <select onchange="setGmDetailRange('from',this.value)">${opts(gmDetail.from)}</select></label>
+        <label>Sampai <select onchange="setGmDetailRange('to',this.value)">${opts(gmDetail.to)}</select></label>
+        <button type="button" class="gmd-link" onclick="gmOpenFull()"><i class="ti ti-external-link"></i> Buka popup lengkap</button>
+      </div>
+      <div class="gmd-summary">${chips.join('')}</div>
+      <div class="table-scroll gm-scroll gmd-scroll">
+        <table class="gm-table gmd-table">
+          <thead><tr>${headCols}</tr></thead>
+          <tbody>${bodyHtml}</tbody>
+        </table>
+      </div>
+      <div class="gmd-legend">Achievement: hijau ≥ 100% · kuning 80–99% · merah &lt; 80%. Baris biru = bulan berjalan.</div>
+    </div>`;
+  if(scroll) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
