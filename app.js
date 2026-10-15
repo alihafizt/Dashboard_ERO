@@ -1420,6 +1420,7 @@ function populateCmpStoreFilter() {
 }
 
 function renderCompareView() {
+  renderGradeMonthPanel();
   populateCmpStoreFilter();
   const storeFilter = document.getElementById('cmpStoreFilter')?.value || '';
   const kpiEl = document.getElementById('cmpKpiRow');
@@ -1858,4 +1859,92 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>{
     navigator.serviceWorker.register('sw.js').catch(err=>console.warn('Registrasi service worker gagal:', err));
   });
+}
+
+// ---- Grade ERO per bulan: bulan-bulan yang sudah diarsipkan + bulan berjalan ----
+function gmMonthLabel(k){
+  if(k===getCurrentMonthKey()) return 'Berjalan';
+  const d=new Date(+k.slice(0,4), +k.slice(5,7)-1, 1);
+  return d.toLocaleDateString('id-ID',{month:'short', year:'numeric'});
+}
+function renderGradeMonthPanel(){
+  const sec=document.querySelector('[data-view-section="compare"] .panel');
+  if(!sec) return;
+  let el=document.getElementById('gradeMonthPanel');
+  if(!el){ el=document.createElement('div'); el.id='gradeMonthPanel'; el.className='gm-wrap'; sec.appendChild(el); }
+
+  const curKey=getCurrentMonthKey();
+  const archKeys=getDashboardArchiveMonths().filter(k=>k!==curKey).sort();
+  const months=[...archKeys, curKey];
+  const people=new Map();
+  const put=(key,list)=>{
+    (list||[]).forEach(r=>{
+      if(!r||!r.name||r.active===false) return;
+      const total=Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r);
+      const p=people.get(r.name)||{name:r.name,store:'',cells:{}};
+      if(r.store) p.store=r.store;
+      p.cells[key]=total;
+      people.set(r.name,p);
+    });
+  };
+  archKeys.forEach(k=>{ const snap=getArchiveSnapshotForMonth(k); if(snap) put(k, snap.rows_snapshot); });
+  put(curKey, rows);
+
+  if(people.size===0){ el.innerHTML=''; return; }
+
+  const list=[...people.values()].sort((a,b)=>{
+    const ta=a.cells[curKey], tb=b.cells[curKey];
+    if(ta!==undefined && tb!==undefined && tb!==ta) return tb-ta;
+    if(ta!==undefined && tb===undefined) return -1;
+    if(ta===undefined && tb!==undefined) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
+  const head=months.map(k=>`<th class="${k===curKey?'gm-cur':''}">${escapeHtml(gmMonthLabel(k))}</th>`).join('');
+  const body=list.map(p=>{
+    const cells=months.map(k=>{
+      const t=p.cells[k];
+      if(t===undefined) return '<td><span class="gm-empty">–</span></td>';
+      const g=calcGrade(t);
+      return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${t.toFixed(2)}</span></td>`;
+    }).join('');
+    return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openPersonModal(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
+  }).join('');
+
+  const ORDER=['Perfect','Good','Need Improve','Bad','Poor'];
+  const sumRows=ORDER.map(g=>{
+    const cells=months.map(k=>{
+      const n=list.filter(p=>p.cells[k]!==undefined && calcGrade(p.cells[k])===g).length;
+      return `<td>${n}</td>`;
+    }).join('');
+    return `<tr><td class="gm-name-col"><span class="grade ${gradeClass(g)}">${escapeHtml(g)}</span></td>${cells}</tr>`;
+  }).join('');
+  const avgCells=months.map(k=>{
+    const vals=list.map(p=>p.cells[k]).filter(v=>v!==undefined);
+    return `<td>${vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '–'}</td>`;
+  }).join('');
+  const countCells=months.map(k=>`<td>${list.filter(p=>p.cells[k]!==undefined).length}</td>`).join('');
+
+  el.innerHTML=`
+    <div class="gm-head">
+      <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
+      <div class="gm-sub">Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini. Klik nama untuk melihat grafik tren.</div>
+    </div>
+    <div class="table-scroll gm-scroll">
+      <table class="gm-table">
+        <thead><tr><th class="gm-name-col">ERO</th>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>
+    <div class="gm-head gm-sum-head"><h3>Ringkasan per bulan</h3></div>
+    <div class="table-scroll gm-scroll">
+      <table class="gm-table">
+        <thead><tr><th class="gm-name-col">Grade</th>${head}</tr></thead>
+        <tbody>
+          ${sumRows}
+          <tr><td class="gm-name-col">ERO terdata</td>${countCells}</tr>
+          <tr><td class="gm-name-col">Rata-rata poin</td>${avgCells}</tr>
+        </tbody>
+      </table>
+    </div>`;
 }

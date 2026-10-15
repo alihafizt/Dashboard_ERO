@@ -1404,3 +1404,21 @@
   background: rgba(255, 255, 255, 0.04);
   border-color: var(--border-light);
 }
+
+/* ---- Grade ERO per bulan ---- */
+.gm-wrap { margin-top: 22px; }
+.gm-head h3 { font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; margin: 0; }
+.gm-head h3 i { color: var(--brand); }
+.gm-sub { font-size: 12.5px; color: var(--text-muted); margin: 4px 0 12px; }
+.gm-sum-head { margin-top: 22px; }
+.gm-scroll { max-height: none; }
+.gm-table { min-width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12.5px; }
+.gm-table th, .gm-table td { padding: 9px 10px; text-align: center; white-space: nowrap; border-bottom: 1px solid var(--tbl-row-line); }
+.gm-table th.gm-cur { color: var(--brand); }
+.gm-table .gm-name-col { position: sticky; left: 0; z-index: 1; background: var(--panel-bg); text-align: left; min-width: 190px; }
+.gm-table thead .gm-name-col { z-index: 6; background: var(--tbl-head); }
+.gm-name { background: none; border: none; box-shadow: none; padding: 0; font-weight: 700; color: var(--text-main); cursor: pointer; text-align: left; font-size: 12.5px; }
+.gm-name:hover { color: var(--brand); transform: none; box-shadow: none; }
+.gm-store { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+.gm-empty { color: var(--text-muted); }
+.gm-table td .grade { font-size: 10.5px; padding: 3px 8px; }
