@@ -2013,15 +2013,18 @@ function gmMonthKeys(){
   return [...getDashboardArchiveMonths().filter(k=>k!==cur).sort(), cur];
 }
 function gmRowsFor(k){ return k===getCurrentMonthKey() ? rows : getStoreRowsForMonth(k); }
-function gmPctCell(p){
+function gmPctCell(p,k,f){
   if(p===null || p===undefined || !isFinite(p)) return '<td><span class="gm-empty">–</span></td>';
   const v=p*100, cls=v>=100?'ontrack':v>=80?'warn':'behind';
-  return `<td><b class="tp-${cls}">${v.toFixed(0)}%</b></td>`;
+  return `<td class="gmd-click" data-k="${escapeAttr(k)}" data-f="${escapeAttr(f)}" onclick="gmShowAch(this.dataset.k,this.dataset.f)" title="Lihat target vs achievement"><b class="tp-${cls}">${v.toFixed(0)}%</b></td>`;
+}
+function gmMonthCell(k){
+  return `<td class="gmd-click gmd-mlabel" data-k="${escapeAttr(k)}" data-f="" onclick="gmShowAch(this.dataset.k,'')" title="Lihat target vs achievement">${escapeHtml(gmMonthLabel(k))}</td>`;
 }
 function openGmDetail(type,name){
   if(!name) return;
   const keys=gmMonthKeys();
-  gmDetail={type,name,from:keys[Math.max(0,keys.length-3)],to:keys[keys.length-1]};
+  gmDetail={type,name,from:keys[Math.max(0,keys.length-3)],to:keys[keys.length-1],focus:null};
   renderGmDetail(true);
 }
 function setGmDetailRange(which,val){
@@ -2055,13 +2058,13 @@ function renderGmDetail(scroll){
     const data=sel.map(k=>({k, r:gmRowsFor(k).find(x=>x.name===gmDetail.name && x.active!==false)}));
     bodyHtml=data.map(({k,r})=>{
       const hi=k===cur?' class="gmd-hi"':'';
-      if(!r) return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td colspan="${2+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
+      if(!r) return `<tr${hi}>${gmMonthCell(k)}<td colspan="${2+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
       const total=gmTotal(r), g=calcGrade(total);
       const pcts=fields.map(f=>{
         const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
         return t>0 ? a/t : null;
       });
-      return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td><b>${total.toFixed(2)}</b></td><td><span class="grade ${gradeClass(g)}">${escapeHtml(g)}</span></td>${pcts.map(gmPctCell).join('')}</tr>`;
+      return `<tr${hi}>${gmMonthCell(k)}<td><b>${total.toFixed(2)}</b></td><td><span class="grade ${gradeClass(g)}">${escapeHtml(g)}</span></td>${pcts.map((p,i)=>gmPctCell(p,k,fields[i])).join('')}</tr>`;
     }).join('');
     const pts=data.filter(d=>d.r).map(d=>gmTotal(d.r));
     const avg=pts.length? pts.reduce((a,b)=>a+b,0)/pts.length : null;
@@ -2077,10 +2080,10 @@ function renderGmDetail(scroll){
       const hi=k===cur?' class="gmd-hi"':'';
       const src=gmRowsFor(k);
       const members=src.filter(r=>r.active!==false && (r.store||'(tanpa toko)')===gmDetail.name);
-      if(!members.length) return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td colspan="${3+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
+      if(!members.length) return `<tr${hi}>${gmMonthCell(k)}<td colspan="${3+fields.length}"><span class="gm-empty">Tidak ada data</span></td></tr>`;
       const avg=members.reduce((a,r)=>a+gmTotal(r),0)/members.length;
       const agg=computeStoreTargetAgg(gmDetail.name, src);
-      return `<tr${hi}><td>${escapeHtml(gmMonthLabel(k))}</td><td><b>${avg.toFixed(2)}</b></td><td>${members.length}</td><td><span class="grade ${gradeClass(calcGrade(avg))}">${escapeHtml(calcGrade(avg))}</span></td>${fields.map(f=>gmPctCell(agg.est[f])).join('')}</tr>`;
+      return `<tr${hi}>${gmMonthCell(k)}<td><b>${avg.toFixed(2)}</b></td><td>${members.length}</td><td><span class="grade ${gradeClass(calcGrade(avg))}">${escapeHtml(calcGrade(avg))}</span></td>${fields.map(f=>gmPctCell(agg.est[f],k,f)).join('')}</tr>`;
     }).join('');
     const avgs=sel.map(k=>{
       const m=gmRowsFor(k).filter(r=>r.active!==false && (r.store||'(tanpa toko)')===gmDetail.name);
@@ -2094,6 +2097,7 @@ function renderGmDetail(scroll){
     }
   }
 
+  const achHtml=gmDetail.focus?gmAchHtml():'';
   el.innerHTML=`
     <div class="gmd-box">
       <div class="gmd-top">
@@ -2115,7 +2119,57 @@ function renderGmDetail(scroll){
           <tbody>${bodyHtml}</tbody>
         </table>
       </div>
+      ${achHtml}
       <div class="gmd-legend">Achievement: hijau ≥ 100% · kuning 80–99% · merah &lt; 80%. Baris biru = bulan berjalan.</div>
     </div>`;
   if(scroll) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function gmAchRow(label,t,a,ratio,focus){
+  const has=ratio!==null && ratio!==undefined && isFinite(ratio);
+  const v=has?ratio*100:null;
+  const cls=v===null?'':(v>=100?'ontrack':v>=80?'warn':'behind');
+  const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2});
+  return `<tr class="${focus?'gmd-focus':''}"><td>${label}</td><td>${fmt(t)}</td><td>${fmt(a)}</td><td>${has?`<b class="tp-${cls}">${v.toFixed(1)}%</b>`:'<span class="gm-empty">–</span>'}</td></tr>`;
+}
+function gmAchHtml(){
+  const k=gmDetail.focus.k, focusF=gmDetail.focus.f;
+  const label=gmMonthLabel(k);
+  const src=gmRowsFor(k);
+  let rowsHtml, sub;
+  if(gmDetail.type==='ero'){
+    const r=src.find(x=>x.name===gmDetail.name && x.active!==false);
+    if(!r) return `<div class="gmd-ach" id="gmdAch"><div class="gmd-ach-title">${escapeHtml(label)}</div><div class="gm-empty">Tidak ada data ERO untuk bulan ini.</div></div>`;
+    rowsHtml=fields.map(f=>{
+      const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
+      return gmAchRow(GMD_LABELS[f]||f, t, a, t>0?a/t:null, f===focusF);
+    }).join('');
+    sub=`Poin ${gmTotal(r).toFixed(2)} · ${calcGrade(gmTotal(r))}`;
+  } else {
+    const agg=computeStoreTargetAgg(gmDetail.name, src);
+    rowsHtml=fields.map(f=>gmAchRow(GMD_LABELS[f]||f, agg.targetSum[f]||0, agg.achSum[f]||0, agg.est[f], f===focusF)).join('');
+    sub=`Total ${agg.count} ERO di toko ini`;
+  }
+  return `<div class="gmd-ach" id="gmdAch">
+    <div class="gmd-ach-head">
+      <div><div class="gmd-ach-title">Target vs Achievement · ${escapeHtml(label)}</div><div class="gmd-sub">${escapeHtml(sub)}</div></div>
+      <button type="button" class="gmd-close" onclick="gmHideAch()" aria-label="Tutup"><i class="ti ti-x"></i></button>
+    </div>
+    <table class="gm-table gmd-ach-table">
+      <thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>
+  </div>`;
+}
+function gmShowAch(k,f){
+  if(!gmDetail) return;
+  gmDetail.focus={k,f:f||null};
+  renderGmDetail(false);
+  const el=document.getElementById('gmdAch');
+  if(el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+function gmHideAch(){
+  if(!gmDetail) return;
+  gmDetail.focus=null;
+  renderGmDetail(false);
 }
