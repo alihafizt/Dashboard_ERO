@@ -83,9 +83,20 @@ const SUPABASE_READY = !SUPABASE_URL.includes('PASTE_') && !SUPABASE_ANON_KEY.in
 const sb = SUPABASE_READY ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 let isAdmin=false, currentUser=null, saveTimer=null;
 
-const ADMIN_EMAILS = ['hafiztsyakir@gmail.com'].map(e=>e.trim().toLowerCase());
-function isAdminFromUser(user){
-  return !!user && ADMIN_EMAILS.includes((user.email||'').toLowerCase());
+// Status admin diperiksa di server (fungsi is_admin() di database), bukan daftar email di kode.
+let adminCheckSeq=0;
+async function verifyAdmin(user){
+  const seq=++adminCheckSeq;
+  if(!user || !SUPABASE_READY){ isAdmin=false; updateAdminUI(); return; }
+  let ok=false;
+  try{
+    const {data,error}=await sb.rpc('is_admin');
+    ok=!error && data===true;
+  }catch(e){ ok=false; }
+  if(seq!==adminCheckSeq) return;
+  isAdmin=ok;
+  updateAdminUI();
+  render();
 }
 function syncMessage(msg,ok=true){const el=document.getElementById('syncStatus');if(!el)return;el.textContent=msg||'';el.className='upload-status '+(ok?'ok':'err');}
 function updateAdminUI(){document.getElementById('adminPanel').style.display=isAdmin?'block':'none';document.getElementById('adminBtnLabel').textContent=isAdmin?'Logout':'Login Admin';const badge=document.getElementById('modeBadge');badge.textContent=isAdmin?'Mode admin':'Mode lihat saja';badge.className='mode-badge '+(isAdmin?'admin':'view');const navSettings=document.getElementById('navSettings');if(navSettings){navSettings.style.display=isAdmin?'flex':'none';if(!isAdmin&&currentView==='settings')switchView('dashboard');}updateSnapshotReminder();}
@@ -99,7 +110,7 @@ function switchView(view){
 }
 async function loadAdminState(){
   if(!SUPABASE_READY){isAdmin=false;updateAdminUI();syncMessage('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan SUPABASE_ANON_KEY di index.html.',false);return;}
-  const {data:{session}}=await sb.auth.getSession();currentUser=session?.user||null;isAdmin=isAdminFromUser(currentUser);updateAdminUI();
+  const {data:{session}}=await sb.auth.getSession();currentUser=session?.user||null;isAdmin=false;await verifyAdmin(currentUser);
   if(isAdmin)syncMessage('Login admin aktif: '+(currentUser.email||'akun admin'));
 }
 async function toggleAdmin(){
@@ -107,7 +118,7 @@ async function toggleAdmin(){
   if(isAdmin){if(!confirm('Keluar dari mode admin? Anda perlu login ulang untuk membuka dashboard lagi.'))return;await sb.auth.signOut();location.reload();return;}
   const email=prompt('Email admin Supabase:');if(email===null)return;const password=prompt('Password admin:');if(password===null)return;
   const {data,error}=await sb.auth.signInWithPassword({email:email.trim(),password});if(error){alert('Login gagal: '+error.message);return;}
-  currentUser=data.user;isAdmin=isAdminFromUser(currentUser);updateAdminUI();render();syncMessage(isAdmin?'Login admin berhasil.':'Login berhasil (mode lihat saja — email ini tidak terdaftar sebagai admin).');
+  currentUser=data.user;await verifyAdmin(currentUser);syncMessage(isAdmin?'Login admin berhasil.':'Login berhasil (mode lihat saja — email ini tidak terdaftar sebagai admin).');
 }
 function normalizeRows(value){
   if(!Array.isArray(value))return[];
@@ -1292,7 +1303,7 @@ async function submitViewGate(){
   const {data,error} = await sb.auth.signInWithPassword({email,password});
   btn.disabled = false; btn.textContent = 'Masuk';
   if(error){ errEl.textContent = 'Login gagal: '+error.message; errEl.style.display='block'; return; }
-  currentUser = data.user; isAdmin = isAdminFromUser(currentUser);
+  currentUser = data.user; isAdmin = false; verifyAdmin(currentUser);
   unlockView();
   bootApp();
 }
@@ -1840,7 +1851,7 @@ function initAutoLogoutWatcher(){
 async function bootApp(){
   if(appBooted) return; appBooted = true;
   await loadAdminState();
-  if(SUPABASE_READY){sb.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;isAdmin=isAdminFromUser(currentUser);updateAdminUI();render();});}
+  if(SUPABASE_READY){sb.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;isAdmin=false;verifyAdmin(currentUser);});}
   await loadData();await loadHistory();
   if(SUPABASE_READY)setInterval(async()=>{if(!document.hidden&&!isAdmin)await loadData();},30000);
   initAutoLogoutWatcher();
@@ -1849,7 +1860,7 @@ document.addEventListener('DOMContentLoaded',()=>{ const d=new Date(); d.setMont
 (async function initGate(){
   if(!SUPABASE_READY){ unlockView(); bootApp(); return; }
   const {data:{session}} = await sb.auth.getSession();
-  if(session){ currentUser = session.user; isAdmin = isAdminFromUser(currentUser); unlockView(); bootApp(); }
+  if(session){ currentUser = session.user; isAdmin = false; verifyAdmin(currentUser); unlockView(); bootApp(); }
 })();
 
 // =========================================
