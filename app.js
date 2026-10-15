@@ -1928,7 +1928,7 @@ function renderGmBody(){
       const t=p.cells[k];
       if(t===undefined) return '<td><span class="gm-empty">–</span></td>';
       const g=calcGrade(t);
-      return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${t.toFixed(2)}</span></td>`;
+      return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${escapeHtml(g)} ${t.toFixed(2)}</span></td>`;
     }).join('');
     return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openPersonModal(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada ERO yang cocok.</td></tr>`;
@@ -1978,7 +1978,7 @@ function renderGmBody(){
 
   body.innerHTML=`
     <div class="gm-section-title">Daftar ERO</div>
-    <div class="table-scroll gm-scroll">
+    <div class="table-scroll gm-scroll gm-scroll-ero">
       <table class="gm-table">
         <thead><tr><th class="gm-name-col">ERO</th>${head}</tr></thead>
         <tbody>${eroRows}</tbody>
