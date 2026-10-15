@@ -1861,38 +1861,60 @@ if('serviceWorker' in navigator){
   });
 }
 
-// ---- Grade ERO per bulan: bulan-bulan yang sudah diarsipkan + bulan berjalan ----
+// ---- Grade ERO per bulan: difilter oleh store di atas, ada pencarian nama, dan produktivitas per toko ----
 function gmMonthLabel(k){
   if(k===getCurrentMonthKey()) return 'Berjalan';
   const d=new Date(+k.slice(0,4), +k.slice(5,7)-1, 1);
   return d.toLocaleDateString('id-ID',{month:'short', year:'numeric'});
 }
+function gmTotal(r){ return Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r); }
+function gmSourceRows(key, storeFilter){
+  const src = key===getCurrentMonthKey() ? rows : (getArchiveSnapshotForMonth(key)?.rows_snapshot || []);
+  return src.filter(r => r && r.active!==false && (!storeFilter || r.store===storeFilter));
+}
 function renderGradeMonthPanel(){
   const sec=document.querySelector('[data-view-section="compare"] .panel');
   if(!sec) return;
   let el=document.getElementById('gradeMonthPanel');
-  if(!el){ el=document.createElement('div'); el.id='gradeMonthPanel'; el.className='gm-wrap'; sec.appendChild(el); }
-
+  if(!el){
+    el=document.createElement('div'); el.id='gradeMonthPanel'; el.className='gm-wrap';
+    el.innerHTML=`
+      <div class="gm-head">
+        <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
+        <div class="gm-sub">Mengikuti filter store di atas. Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini.</div>
+      </div>
+      <div class="gm-search-row"><i class="ti ti-search"></i><input type="search" id="gmSearch" class="gm-search" placeholder="Cari nama ERO..." autocomplete="off"></div>
+      <div id="gmBody"></div>`;
+    sec.appendChild(el);
+    el.querySelector('#gmSearch').addEventListener('input', renderGmBody);
+  }
+  renderGmBody();
+}
+function renderGmBody(){
+  const body=document.getElementById('gmBody');
+  if(!body) return;
+  const storeFilter=document.getElementById('cmpStoreFilter')?.value || '';
+  const q=(document.getElementById('gmSearch')?.value || '').trim().toLowerCase();
   const curKey=getCurrentMonthKey();
   const archKeys=getDashboardArchiveMonths().filter(k=>k!==curKey).sort();
   const months=[...archKeys, curKey];
+  const byMonth={}; months.forEach(k=>{ byMonth[k]=gmSourceRows(k, storeFilter); });
+
+  // ---- Daftar ERO ----
   const people=new Map();
-  const put=(key,list)=>{
-    (list||[]).forEach(r=>{
-      if(!r||!r.name||r.active===false) return;
-      const total=Number.isFinite(Number(r.total))?Number(r.total):calcTotal(r);
+  months.forEach(k=>{
+    byMonth[k].forEach(r=>{
+      if(!r.name) return;
       const p=people.get(r.name)||{name:r.name,store:'',cells:{}};
       if(r.store) p.store=r.store;
-      p.cells[key]=total;
+      p.cells[k]=gmTotal(r);
       people.set(r.name,p);
     });
-  };
-  archKeys.forEach(k=>{ const snap=getArchiveSnapshotForMonth(k); if(snap) put(k, snap.rows_snapshot); });
-  put(curKey, rows);
+  });
+  if(people.size===0){ body.innerHTML='<div class="gm-empty-box">Belum ada data untuk ditampilkan.</div>'; return; }
 
-  if(people.size===0){ el.innerHTML=''; return; }
-
-  const list=[...people.values()].sort((a,b)=>{
+  let list=[...people.values()].filter(p=>!q || p.name.toLowerCase().includes(q));
+  list.sort((a,b)=>{
     const ta=a.cells[curKey], tb=b.cells[curKey];
     if(ta!==undefined && tb!==undefined && tb!==ta) return tb-ta;
     if(ta!==undefined && tb===undefined) return -1;
@@ -1901,7 +1923,7 @@ function renderGradeMonthPanel(){
   });
 
   const head=months.map(k=>`<th class="${k===curKey?'gm-cur':''}">${escapeHtml(gmMonthLabel(k))}</th>`).join('');
-  const body=list.map(p=>{
+  const eroRows=list.map(p=>{
     const cells=months.map(k=>{
       const t=p.cells[k];
       if(t===undefined) return '<td><span class="gm-empty">–</span></td>';
@@ -1909,34 +1931,60 @@ function renderGradeMonthPanel(){
       return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${t.toFixed(2)}</span></td>`;
     }).join('');
     return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openPersonModal(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
-  }).join('');
+  }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada ERO yang cocok.</td></tr>`;
 
   const ORDER=['Perfect','Good','Need Improve','Bad','Poor'];
   const sumRows=ORDER.map(g=>{
     const cells=months.map(k=>{
-      const n=list.filter(p=>p.cells[k]!==undefined && calcGrade(p.cells[k])===g).length;
+      const n=[...people.values()].filter(p=>p.cells[k]!==undefined && calcGrade(p.cells[k])===g).length;
       return `<td>${n}</td>`;
     }).join('');
     return `<tr><td class="gm-name-col"><span class="grade ${gradeClass(g)}">${escapeHtml(g)}</span></td>${cells}</tr>`;
   }).join('');
-  const avgCells=months.map(k=>{
-    const vals=list.map(p=>p.cells[k]).filter(v=>v!==undefined);
-    return `<td>${vals.length? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2) : '–'}</td>`;
-  }).join('');
-  const countCells=months.map(k=>`<td>${list.filter(p=>p.cells[k]!==undefined).length}</td>`).join('');
+  const allVals=months.map(k=>[...people.values()].map(p=>p.cells[k]).filter(v=>v!==undefined));
+  const avgCells=allVals.map(vals=>`<td>${vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2):'–'}</td>`).join('');
+  const countCells=allVals.map(vals=>`<td>${vals.length}</td>`).join('');
 
-  el.innerHTML=`
-    <div class="gm-head">
-      <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
-      <div class="gm-sub">Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini. Klik nama untuk melihat grafik tren.</div>
-    </div>
+  // ---- Produktivitas per toko ----
+  const stores=new Map();
+  months.forEach(k=>{
+    byMonth[k].forEach(r=>{
+      const st=r.store||'(tanpa toko)';
+      if(!stores.has(st)) stores.set(st,{name:st,cells:{}});
+      const s=stores.get(st);
+      const c=s.cells[k]||{sum:0,n:0};
+      c.sum+=gmTotal(r); c.n+=1; s.cells[k]=c;
+    });
+  });
+  const storeList=[...stores.values()].filter(s=>!q || s.name.toLowerCase().includes(q) || [...people.values()].some(p=>p.store===s.name && p.name.toLowerCase().includes(q)));
+  storeList.sort((a,b)=>{
+    const ca=a.cells[curKey], cb=b.cells[curKey];
+    const va=ca?ca.sum/ca.n:-1, vb=cb?cb.sum/cb.n:-1;
+    if(vb!==va) return vb-va;
+    return a.name.localeCompare(b.name);
+  });
+  const storeRows=storeList.map(s=>{
+    const cells=months.map(k=>{
+      const c=s.cells[k];
+      if(!c) return '<td><span class="gm-empty">–</span></td>';
+      return `<td><b class="gm-avg">${(c.sum/c.n).toFixed(2)}</b><div class="gm-store">${c.n} ERO</div></td>`;
+    }).join('');
+    const clickable = s.name!=='(tanpa toko)';
+    const nameCell = clickable
+      ? `<button type="button" class="gm-name" data-name="${escapeHtml(s.name)}" onclick="openStoreModal(this.dataset.name)">${escapeHtml(s.name)}</button>`
+      : escapeHtml(s.name);
+    return `<tr><td class="gm-name-col">${nameCell}</td>${cells}</tr>`;
+  }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada toko yang cocok.</td></tr>`;
+
+  body.innerHTML=`
+    <div class="gm-section-title">Daftar ERO</div>
     <div class="table-scroll gm-scroll">
       <table class="gm-table">
         <thead><tr><th class="gm-name-col">ERO</th>${head}</tr></thead>
-        <tbody>${body}</tbody>
+        <tbody>${eroRows}</tbody>
       </table>
     </div>
-    <div class="gm-head gm-sum-head"><h3>Ringkasan per bulan</h3></div>
+    <div class="gm-section-title">Ringkasan grade per bulan</div>
     <div class="table-scroll gm-scroll">
       <table class="gm-table">
         <thead><tr><th class="gm-name-col">Grade</th>${head}</tr></thead>
@@ -1945,6 +1993,13 @@ function renderGradeMonthPanel(){
           <tr><td class="gm-name-col">ERO terdata</td>${countCells}</tr>
           <tr><td class="gm-name-col">Rata-rata poin</td>${avgCells}</tr>
         </tbody>
+      </table>
+    </div>
+    <div class="gm-section-title">Produktivitas per toko <span class="gm-hint">rata-rata poin ERO di toko, dan jumlah ERO</span></div>
+    <div class="table-scroll gm-scroll">
+      <table class="gm-table">
+        <thead><tr><th class="gm-name-col">Toko</th>${head}</tr></thead>
+        <tbody>${storeRows}</tbody>
       </table>
     </div>`;
 }

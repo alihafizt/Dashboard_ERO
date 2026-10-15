@@ -1422,3 +1422,10 @@
 .gm-store { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
 .gm-empty { color: var(--text-muted); }
 .gm-table td .grade { font-size: 10.5px; padding: 3px 8px; }
+.gm-search-row { display: flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 9px 12px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--panel-bg); }
+.gm-search-row i { color: var(--text-muted); }
+.gm-search { flex: 1; border: none !important; background: transparent !important; box-shadow: none !important; padding: 4px 0 !important; font-size: 13.5px; color: var(--text-main); outline: none; }
+.gm-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); margin: 20px 0 10px; }
+.gm-hint { text-transform: none; letter-spacing: 0; font-weight: 500; margin-left: 8px; font-size: 11.5px; }
+.gm-avg { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-main); }
+.gm-empty-box { text-align: center; color: var(--text-muted); padding: 18px; font-size: 13px; }
