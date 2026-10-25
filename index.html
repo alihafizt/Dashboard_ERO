@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Big Malang 2 — Point Dashboard</title>
+<meta name="theme-color" content="#F5B400">
+<meta name="description" content="Big Malang 2 — dashboard poin dan peringkat ERO.">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="gated">
+<div id="viewGate" class="modal-overlay" style="z-index:200;">
+  <div class="modal-box" style="max-width:400px; text-align:center;">
+    <div style="font-size:36px; margin-bottom:12px;"><i class="ti ti-trophy" style="color:var(--brand);"></i></div>
+    <div class="modal-title" style="justify-content:center;">Big Malang 2</div>
+    <div class="modal-sub" style="margin-bottom:24px;">Login dengan akun tim untuk membuka dashboard.</div>
+    <input type="email" id="viewGateEmail" placeholder="Email" style="width:100%; margin-bottom:12px;" autocomplete="username">
+    <input type="password" id="viewGatePassword" placeholder="Password" style="width:100%; margin-bottom:16px;" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitViewGate()">
+    <button class="primary" id="viewGateSubmit" style="width:100%; justify-content:center; padding:12px;" onclick="submitViewGate()">Masuk</button>
+    <div id="viewGateError" style="color:#DC2626; font-size:13px; margin-top:12px; font-weight:500; display:none;"></div>
+  </div>
+</div>
+
+<div class="wrap">
+<div class="app-shell">
+
+  <!-- Sidebar Navigation -->
+  <aside class="app-sidebar" id="appSidebar">
+    <div class="sidebar-brand"><svg class="nav-icon brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/><path d="M8 5H5a3 3 0 0 0 3 3"/><path d="M16 5h3a3 3 0 0 1-3 3"/><path d="M12 12v3"/><path d="M9 19h6"/><path d="M10 16h4l.5 3h-5z"/></svg><span class="brand-text">Big Malang 2</span></div>
+    <nav>
+      <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')" title="Dashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg><span class="nav-label">Dashboard</span></button>
+      <button class="nav-item" data-view="eros" onclick="switchView('eros')" title="Data ERO"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.3 20c0-3.3 2.5-5.7 5.7-5.7s5.7 2.4 5.7 5.7"/><circle cx="17.2" cy="8.6" r="2.3"/><path d="M15.7 14.4c2.3.4 4 2.3 4 4.7"/></svg><span class="nav-label">Data ERO</span></button>
+      <button class="nav-item" data-view="stores" onclick="switchView('stores')" title="Data Toko"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l1.2-4.5h13.6L20 9.5"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.3 20v-5.3h5.4V20"/><path d="M4 9.5h16"/></svg><span class="nav-label">Data Toko</span></button>
+      <button class="nav-item" data-view="reports" onclick="switchView('reports')" title="Report"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="1.5"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg><span class="nav-label">Report</span></button>
+      <button class="nav-item" data-view="compare" onclick="switchView('compare')" title="Analisis Progres"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-5"/></svg><span class="nav-label">Analisis</span></button>
+      <button class="nav-item" data-view="monthly" onclick="switchView('monthly')" title="Arsip Bulanan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20.5" x2="20" y2="20.5"/><rect x="6" y="10.5" width="3.6" height="9.5"/><rect x="14.4" y="5.5" width="3.6" height="14.5"/></svg><span class="nav-label">Arsip</span></button>
+      <button class="nav-item" data-view="settings" id="navSettings" style="display:none;" onclick="switchView('settings')" title="Kelola Data"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg><span class="nav-label">Kelola Data</span><span id="snapshotNavBadge" class="snapshot-nav-badge" style="display:none;" title="Snapshot hari ini belum disimpan"></span></button>
+    </nav>
+    <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Ciutkan menu">
+      <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6l-6 6 6 6"/><path d="M17 6l-6 6 6 6"/></svg><span class="nav-label">Ciutkan</span>
+    </button>
+  </aside>
+
+  <div class="app-content">
+
+  <!-- Header -->
+  <div class="hero">
+    <div class="hero-left">
+      <h1><i class="ti ti-trophy"></i>Big Malang 2</h1>
+      <div class="sub">Point Dashboard — Daily Top & Bottom, update terpusat.</div>
+    </div>
+    <div class="hero-right">
+      <span class="mode-badge" id="modeBadge"></span>
+      <button id="themeToggle" onclick="toggleTheme()" title="Ganti Tema" style="border-radius: 50%; padding: 8px 10px;">
+        <svg id="themeIconMoon" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg id="themeIconSun" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </button>
+      <button id="adminBtn" onclick="toggleAdmin()"><i class="ti ti-lock"></i><span id="adminBtnLabel">Login Admin</span></button>
+    </div>
+  </div>
+
+  <!-- DASHBOARD VIEW -->
+  <div class="view-section active" data-view-section="dashboard">
+
+    <!-- KPI hero: rata-rata poin, pembanding bulan lalu, tren, distribusi grade, dan pemilih periode -->
+    <section class="kpi-row" id="kpiHero" aria-label="Ringkasan performa">
+      <div class="panel kpi-c1">
+        <div>
+          <div class="kpi-lbl">Rata-rata poin ERO <b id="kpiPeriodName"></b></div>
+          <div class="kpi-period" style="display:flex;align-items:center;flex-wrap:wrap;margin-top:8px;">
+            <select id="dashMonthSelect" onchange="changeDashboardMonth(this.value)" aria-label="Pilih periode data Dashboard"><option value="current">Bulan berjalan</option></select>
+            <button id="dashBackBtn" class="kpi-back" onclick="changeDashboardMonth('current')"><i class="ti ti-arrow-back-up"></i>Bulan berjalan</button>
+            <span class="kpi-hint" id="dashPeriodHint"></span>
+          </div>
+        </div>
+        <div>
+          <div class="kpi-big"><span id="statAvg">0</span><span class="kpi-unit">/ 10.00 pts</span></div>
+          <div style="margin-top:8px;"><span class="kpi-delta none" id="kpiDelta"></span></div>
+        </div>
+        <div class="kpi-spark" id="kpiSpark"></div>
+        <div class="kpi-foot">Target grade Good: <b>8.00 pts</b></div>
+      </div>
+      <div class="panel kpi-c2">
+        <div class="kpi-lbl">ERO Aktif</div>
+        <div>
+          <div class="kpi-big"><span id="statCount">0</span><span class="kpi-unit" id="kpiTotalEro"></span></div>
+          <div class="kpi-meta"><span id="kpiStoreCount"></span><span id="lastUpdate"></span></div>
+        </div>
+        <div class="kpi-foot" id="kpiActivePct"></div>
+      </div>
+      <div class="panel kpi-c3">
+        <div class="kpi-lbl" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">Komposisi Mutu Kinerja <span style="color:var(--brand);font-family:'JetBrains Mono',monospace;">Standar Good ≥ 8.0</span></div>
+        <div class="kpi-grades">
+          <div class="kpi-stack" id="kpiStack" role="img"></div>
+          <ul class="kpi-legend" id="kpiLegend"></ul>
+        </div>
+        <div class="kpi-tiers"><span>Healthy Tier (Good+): <b class="ok" id="kpiHealthy">0%</b></span><span>Watch Tier (Bad/Poor): <b class="warn" id="kpiWatch">0%</b></span></div>
+      </div>
+    </section>
+    <div class="archive-note dash-archive-banner" id="dashArchiveBanner" data-archive-only></div>
+
+    <div class="panel mobile-leader" data-live-only>
+      <h2><i class="ti ti-device-mobile"></i>Mobile Leader View</h2>
+      <div class="mobile-grid">
+        <div class="mobile-kpi"><div class="k">ERO</div><div class="v" id="mCount">0</div></div>
+        <div class="mobile-kpi"><div class="k">Rata-rata</div><div class="v" id="mAvg">0</div></div>
+        <div class="mobile-kpi"><div class="k">Improved</div><div class="v" id="mImproved">0</div></div>
+        <div class="mobile-kpi"><div class="k">Alert</div><div class="v" id="mAlerts">0</div></div>
+      </div>
+      <div class="focus-box"><b>Fokus hari ini</b><div id="mFocus">Memuat prioritas...</div></div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="panel bx-7 o1">
+        <h2><i class="ti ti-medal"></i>Top 3</h2>
+        <div id="podium" class="podium"></div>
+      </div>
+
+      <div class="panel bx-6 o5" data-live-only>
+        <h2><i class="ti ti-bell"></i>Alert Otomatis</h2>
+        <div id="alertPanel" class="alert-list"></div>
+      </div>
+
+      <div class="panel bx-5 o2">
+        <h2><i class="ti ti-alert-triangle"></i>Bottom 3 — Perlu Perhatian</h2>
+        <div id="watchlist"></div>
+      </div>
+
+      <div class="panel bx-6 o6" data-live-only>
+        <h2><i class="ti ti-bolt"></i>Yesterday vs Today</h2>
+        <div id="yesterdayToday" class="insight-grid"></div>
+      </div>
+
+      <div class="panel o7 dashboard-grid-full" data-live-only>
+        <h2><i class="ti ti-arrows-up-down"></i>Most Improved &amp; Biggest Drop</h2>
+        <div id="moversPanel" class="insight-grid"></div>
+      </div>
+
+      <div class="panel bx-8 o3 dashboard-grid-full">
+        <h2><i class="ti ti-chart-line"></i>Tren &amp; Distribusi Grade</h2>
+        <div id="dashboardCharts"></div>
+      </div>
+
+      <div class="panel o8 dashboard-grid-full">
+        <h2><i class="ti ti-list-details"></i>Papan Peringkat Lengkap<span id="dashLbSuffix"></span></h2>
+        <div id="leaderboard"></div>
+      </div>
+
+      <div class="panel bx-4 o4">
+        <h2><i class="ti ti-layout-grid"></i>Pilar Kategori Poin</h2>
+        <div class="pilar-list" id="pilarList"></div>
+        <div class="pilar-foot" id="pilarFoot"></div>
+      </div>
+
+      <!-- Khusus tampilan arsip: ringkasan store & data lengkap per ERO -->
+      <div class="panel dashboard-grid-full" data-archive-only>
+        <h2><i class="ti ti-building-store"></i>Ringkasan Store<span class="dash-sfx"></span></h2>
+        <div class="compare-table-wrap"><table class="compare-table dash-wide-table" id="dashArchiveStoreTable"></table></div>
+      </div>
+
+      <div class="panel dashboard-grid-full" data-archive-only>
+        <div class="dash-detail-head">
+          <h2><i class="ti ti-table"></i>Data Lengkap per ERO<span class="dash-sfx"></span></h2>
+          <div class="dash-detail-tools">
+            <span class="dash-detail-count" id="dashArchiveCount"></span>
+            <input type="search" id="dashArchiveSearch" placeholder="Cari nama ERO atau store…" oninput="renderDashboardArchiveDetail()" aria-label="Cari ERO atau store di data arsip">
+          </div>
+        </div>
+        <div class="compare-table-wrap dash-detail-scroll" id="dashArchiveDetail"></div>
+      </div>
+    </div>
+  </div>
+  <!-- /DASHBOARD VIEW -->
+
+  <!-- ANALISIS PROGRES VIEW (NEW) -->
+  <div class="view-section" data-view-section="compare">
+    <div class="panel">
+      <h2><i class="ti ti-chart-arrows-vertical"></i>Analisis Progres</h2>
+
+      <!-- Mode tabs -->
+      <div class="compare-mode-tabs">
+        <button class="cmp-tab active" data-cmp-mode="store-time" onclick="setCmpMode('store-time')"><i class="ti ti-building-store"></i> Store dari Waktu ke Waktu</button>
+        <button class="cmp-tab" data-cmp-mode="ero-time" onclick="setCmpMode('ero-time')"><i class="ti ti-user-check"></i> ERO dari Waktu ke Waktu</button>
+        <button class="cmp-tab" data-cmp-mode="ero-store" onclick="setCmpMode('ero-store')"><i class="ti ti-arrows-left-right"></i> Perbandingan ERO dalam Store</button>
+      </div>
+
+      <!-- View type: Tren (chart bergerak) vs Bandingkan 2 Periode (point-in-time) -->
+      <div class="compare-mode-tabs" style="margin-top:-4px;">
+        <button class="cmp-tab active" data-cmp-viewtype="trend" onclick="setCmpViewType('trend')"><i class="ti ti-chart-line"></i> Tren</button>
+        <button class="cmp-tab" data-cmp-viewtype="period" onclick="setCmpViewType('period')"><i class="ti ti-calendar-stats"></i> Bandingkan 2 Periode</button>
+      </div>
+
+      <!-- Shared store filter -->
+      <div class="cmp-period-bar">
+        <label>Filter Store</label>
+        <select id="cmpStoreFilter" onchange="renderCompareView()"><option value="">Semua Store</option></select>
+      </div>
+
+      <!-- TREN controls -->
+      <div class="cmp-period-bar" id="cmpTrendControls">
+        <label>Periode:</label>
+        <button class="cmp-period-btn" data-period="7" onclick="setCmpPeriod(7)">7 Hari</button>
+        <button class="cmp-period-btn active" data-period="30" onclick="setCmpPeriod(30)">30 Hari</button>
+        <button class="cmp-period-btn" data-period="90" onclick="setCmpPeriod(90)">3 Bulan</button>
+        <button class="cmp-period-btn" data-period="0" onclick="setCmpPeriod(0)">Semua</button>
+      </div>
+
+      <!-- BANDINGKAN 2 PERIODE controls -->
+      <div class="cmp-period-bar" id="cmpPeriodControls" style="display:none;">
+        <label>Preset:</label>
+        <button class="cmp-period-btn active" data-preset="week" onclick="setCmpPreset('week')">Minggu Ini vs Minggu Lalu</button>
+        <button class="cmp-period-btn" data-preset="month" onclick="setCmpPreset('month')">Bulan Ini vs Bulan Lalu</button>
+        <button class="cmp-period-btn" data-preset="custom" onclick="setCmpPreset('custom')">Custom Tanggal (Daily)</button>
+      </div>
+      <div class="cmp-period-bar" id="cmpCustomDateRow" style="display:none;">
+        <div class="filter-field" style="min-width:140px;"><label>Periode B — Dari</label><input type="date" id="cmpBFrom" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode B — Sampai</label><input type="date" id="cmpBTo" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode A — Dari</label><input type="date" id="cmpAFrom" onchange="renderCompareView()"></div>
+        <div class="filter-field" style="min-width:140px;"><label>Periode A — Sampai</label><input type="date" id="cmpATo" onchange="renderCompareView()"></div>
+      </div>
+      <div class="sub" id="cmpCustomHint" style="display:none; color:var(--text-muted); font-size:12px; margin:-6px 0 16px;">Tip: isi Dari = Sampai dengan tanggal yang sama pada kedua periode untuk perbandingan harian (misal hari ini vs kemarin).</div>
+
+      <!-- KPI row -->
+      <div id="cmpKpiRow" class="cmp-kpi-row"></div>
+
+      <!-- Dynamic content area -->
+      <div id="cmpContent"></div>
+    </div>
+  </div>
+  <!-- /ANALISIS PROGRES VIEW -->
+
+  <!-- MONTHLY COMPARISON VIEW -->
+  <div class="view-section" data-view-section="monthly">
+    <div class="panel">
+      <h2><i class="ti ti-calendar-stats"></i>Perbandingan Bulan Sebelumnya vs Bulan Berjalan</h2>
+      <div class="archive-note">Gunakan halaman ini untuk melihat perubahan <b>Point, Rank, Grade, Target dan Achievement</b> per ERO. Data arsip tidak mengubah data aktif bulan berjalan.</div>
+      <div class="filter-bar" style="margin-bottom:14px;">
+        <div class="filter-field" style="min-width:240px;"><label>Bulan Sebelumnya</label><select id="archiveSelect" onchange="renderMonthlyCompare()"></select></div>
+        <div class="filter-field"><label>Bulan Berjalan</label><div id="currentMonthLabel" class="readonly-val" style="padding:10px 0;font-weight:700;"></div></div>
+      </div>
+      <div id="monthlyKpis" class="compare-kpis"></div>
+      <div id="monthlyCompareTable" class="compare-table-wrap"></div>
+    </div>
+  </div>
+  <!-- /MONTHLY COMPARISON VIEW -->
+
+  <!-- SETTINGS VIEW (kelola data, admin only) -->
+  <div class="view-section" data-view-section="settings">
+      <div class="panel" id="adminPanel" style="display:none;">
+        <h2><i class="ti ti-upload"></i>Update Data & Arsip Bulanan</h2>
+        <div id="snapshotReminderBanner" class="snapshot-reminder-banner" style="display:none;"><i class="ti ti-alert-triangle"></i><span>Snapshot hari ini belum disimpan! Semua fitur tren &amp; perbandingan bergantung pada snapshot harian — klik "Simpan snapshot hari ini" di bawah sebelum mengakhiri hari.</span></div>
+        <div class="archive-note"><b>Alur baru:</b> pilih <b>Data Berjalan</b> untuk mengganti dashboard aktif. Pilih <b>Arsip Bulan Sebelumnya</b> untuk menyimpan data bulan lalu tanpa mengganggu ranking bulan berjalan.</div>
+        <div class="upload-mode">
+          <div class="mode-choice"><input type="radio" id="uploadCurrent" name="uploadMode" value="current" checked onchange="updateUploadModeUI()"><label for="uploadCurrent"><i class="ti ti-refresh"></i>Data Berjalan</label></div>
+          <div class="mode-choice"><input type="radio" id="uploadArchive" name="uploadMode" value="archive" onchange="updateUploadModeUI()"><label for="uploadArchive"><i class="ti ti-archive"></i>Arsip Bulan Sebelumnya</label></div>
+        </div>
+        <div class="month-tools">
+          <div class="tool-card" id="customDateCard">
+            <label>Tanggal Data (opsional — untuk susulan)</label>
+            <input type="date" id="customSnapshotDate">
+            <div style="font-size:11px;color:var(--text-muted);line-height:1.4;margin-top:4px;">Kosongkan kalau ini upload hari ini. Isi kalau Anda telat upload beberapa hari (misalnya 5 hari absen) — supaya riwayat harian &amp; mingguan tetap tercatat sesuai tanggal aslinya, bukan menumpuk di hari ini. Kalau ada beberapa file tertinggal, upload satu per satu dari yang paling lama ke yang terbaru.</div>
+          </div>
+          <div class="tool-card" id="archiveMonthCard" style="display:none;">
+            <label>Bulan Arsip</label>
+            <input type="month" id="archiveMonth">
+          </div>
+          <div class="tool-card">
+            <label>Mode Ranking</label>
+            <select id="rankMode"><option value="active">ERO aktif saja</option><option value="all">Semua ERO</option></select>
+          </div>
+          <div class="tool-card">
+            <label>Tips</label>
+            <div style="font-size:12px;color:var(--text-muted);line-height:1.45;">ERO resign bisa dinonaktifkan dari tabel Data ERO. ERO nonaktif tidak masuk ranking.</div>
+          </div>
+        </div>
+        <div class="upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <i class="ti ti-file-spreadsheet"></i>
+          <div class="main-txt">Klik atau seret file Excel ke sini</div>
+          <div class="sub-txt">Membaca Target, Achievement, Est %, Point, Grade dan Store dari file Excel.</div>
+          <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this.files[0])">
+        </div>
+        <div id="uploadStatus" class="upload-status"></div>
+        <div id="syncStatus" class="upload-status"></div>
+        <details class="manual-toggle">
+          <summary>Atau input/edit manual (paste dari Excel)</summary>
+          <textarea id="pasteBox" placeholder="Nama	Device	Acc	Operator	Boltech	AR Acc	AR Boltech	Store"></textarea>
+          <div class="toolbar">
+            <button class="primary" onclick="importPaste()"><i class="ti ti-file-import"></i>Tambahkan baris ini</button>
+            <button onclick="addRow()"><i class="ti ti-plus"></i>Tambah baris kosong</button>
+            <button onclick="saveSnapshot()"><i class="ti ti-device-floppy"></i>Simpan snapshot hari ini</button>
+            <button class="danger" onclick="clearAll()"><i class="ti ti-trash"></i>Hapus semua</button>
+            <button onclick="loadData();loadHistory();"><i class="ti ti-refresh"></i>Refresh dari server</button>
+            <button onclick="downloadFullBackup(this)"><i class="ti ti-cloud-download"></i>Download Backup Lengkap</button>
+          </div>
+        </details>
+      </div>
+  </div>
+  <!-- /SETTINGS VIEW -->
+
+  <!-- EROS VIEW -->
+  <div class="view-section" data-view-section="eros">
+      <div class="panel">
+        <h2><i class="ti ti-table"></i>Semua Data (<span id="rowCount">0</span> orang)</h2>
+        <div class="filter-bar">
+          <div class="filter-field"><label>Cari Nama ERO</label><input class="search-input" id="searchName" type="search" placeholder="Ketik nama ERO..." oninput="onFilterChange()"></div>
+          <div class="filter-field">
+            <label>Filter Store</label>
+            <select id="filterStore" onchange="onFilterChange()"><option value="">Semua Store</option></select>
+          </div>
+          <div class="filter-field">
+            <label>Filter Grade</label>
+            <select id="filterGrade" onchange="onFilterChange()">
+              <option value="">Semua Grade</option>
+              <option value="Perfect">Perfect</option>
+              <option value="Good">Good</option>
+              <option value="Need Improve">Need Improve</option>
+              <option value="Bad">Bad</option>
+              <option value="Poor">Poor</option>
+            </select>
+          </div>
+          <button onclick="resetFilters()" style="margin-bottom: 2px;"><i class="ti ti-filter-x"></i>Reset Filter</button>
+          <div class="filter-count" id="filterCount"></div>
+        </div>
+        <div class="toolbar" style="margin-top:0; margin-bottom:16px;">
+          <button onclick="exportExcel()"><i class="ti ti-file-spreadsheet"></i>Download Excel</button>
+          <button onclick="window.print()"><i class="ti ti-printer"></i>Cetak / Simpan PDF</button>
+        </div>
+        <div class="sub" style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">Klik nama di tabel atau papan peringkat untuk melihat grafik tren poin orang tersebut.</div>
+        <div class="table-scroll">
+          <table id="dataTable">
+            <thead>
+              <tr>
+                <th class="name">Nama</th><th>Rank</th><th>Point per Category</th><th>Grade</th><th>Progres</th><th>Status</th><th>Store</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+          </table>
+        </div>
+      </div>
+  </div>
+  <!-- /EROS VIEW -->
+
+  <!-- STORES VIEW -->
+  <div class="view-section" data-view-section="stores">
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:10px;">
+          <h2><i class="ti ti-building-store"></i>Store Performance Score</h2>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;">
+            <div id="storePerformanceMonthFilter" class="store-month-filter store-performance-filter"></div>
+            <button type="button" class="export-share-btn" onclick="exportStorePerformanceImage()"><i class="ti ti-camera"></i> Export / Share Analisis</button>
+          </div>
+        </div>
+        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Skor store dihitung dari rata-rata poin ERO aktif pada bulan yang dipilih (maksimum 10 = 100). Pilih bulan untuk melihat performa seluruh toko pada periode tersebut.</div>
+        <div id="storeScoreGrid" class="score-grid"></div>
+      </div>
+
+      <div class="panel">
+        <h2><i class="ti ti-building-store"></i>Ringkasan per Store</h2>
+        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Diurutkan dari rata-rata poin terendah — toko yang paling perlu dibantu tampil paling atas. Target Store = akumulasi target seluruh ERO aktif di store. Klik nama toko untuk melihat detail target, pencapaian, dan ERO.</div>
+        <div class="table-scroll" style="max-height: 450px;">
+          <table id="storeTable">
+            <thead>
+              <tr>
+                <th class="name">Store</th><th>ERO</th><th>Rata-rata</th><th>Target Store</th><th>Pencapaian Store</th><th>Perfect</th><th>Good</th><th>Need Improve</th><th>Bad</th><th>Poor</th>
+              </tr>
+            </thead>
+            <tbody id="storeTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+  </div>
+  <!-- /STORES VIEW -->
+
+  <!-- REPORTS VIEW -->
+  <div class="view-section" data-view-section="reports">
+      <div class="panel">
+        <h2><i class="ti ti-timeline"></i>Riwayat Progres</h2>
+        <div class="filter-bar date-tools" style="padding: 12px 16px;">
+          <div class="filter-field"><label>Dari tanggal</label><input type="date" id="dateFrom" onchange="applyDateFilter()"></div>
+          <div class="filter-field"><label>Sampai tanggal</label><input type="date" id="dateTo" onchange="applyDateFilter()"></div>
+          <button onclick="setDateRange(7)">7 Hari</button><button onclick="setDateRange(14)">14 Hari</button><button onclick="setDateRange(30)">30 Hari</button><button onclick="clearDateFilter()">Semua</button>
+        </div>
+        <div id="historyLimitBanner"></div>
+        <div id="historySummary"></div>
+        <div id="historyTrend"></div>
+        <div id="history" class="history-scroll"></div>
+      </div>
+
+      <div class="panel">
+        <h2><i class="ti ti-chart-line"></i>Perbandingan Antar Store dari Waktu ke Waktu</h2>
+        <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Berdasarkan data snapshot yang tersimpan di Riwayat Progres. Pilih maksimal 5 store untuk dibandingkan.</div>
+        <div id="storeCompareControls" class="store-compare-controls"></div>
+        <div id="storeCompareChart"></div>
+      </div>
+  </div>
+  <!-- /REPORTS VIEW -->
+
+  </div>
+</div>
+</div>
+
+<div id="personModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closePersonModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="personModalName">-</div>
+        <div class="modal-sub" id="personModalStore">-</div>
+      </div>
+      <button class="modal-close" onclick="closePersonModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="personModalChart"></div>
+    <div id="personModalList"></div>
+  </div>
+</div>
+
+<div id="storeModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeStoreModal()">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="storeModalName"><i class="ti ti-building-store"></i> -</div>
+        <div class="modal-sub" id="storeModalSub">-</div>
+      </div>
+      <button class="modal-close" onclick="closeStoreModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="storeModalMonthFilter" class="store-month-filter"></div>
+    <div id="storeModalTargetProgress"></div>
+    <div id="storeModalList"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
