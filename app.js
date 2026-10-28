@@ -365,6 +365,7 @@ async function saveSnapshot(){
 function render(){
   renderAttentionPanel();
   renderTrendWarnPanel();
+  renderStoreProductivity();
   const allWithTotals=rows.map((r,i)=>({...r,total:calcTotal(r),idx:i}));
   const activeRows=allWithTotals.filter(isActive);
   const sorted=activeRows.slice().sort((a,b)=>b.total-a.total);
@@ -1438,6 +1439,7 @@ function populateCmpStoreFilter() {
 }
 
 function renderCompareView() {
+  moveMonthlyCompareIntoAnalisis();
   renderGradeMonthPanel();
   renderWeeklyPanel();
   populateCmpStoreFilter();
@@ -1902,12 +1904,12 @@ function renderGradeMonthPanel(){
         <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
         <div class="gm-sub">Mengikuti filter store di atas. Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini.</div>
       </div>
-      <div id="gmDetail"></div>
       <div class="gm-search-row"><i class="ti ti-search"></i><input type="search" id="gmSearch" class="gm-search" placeholder="Cari nama ERO..." autocomplete="off"></div>
       <div id="gmBody"></div>`;
     sec.appendChild(el);
     el.querySelector('#gmSearch').addEventListener('input', renderGmBody);
   }
+  applyAnalisisTab();
   renderGmBody();
 }
 function renderGmBody(){
@@ -1950,7 +1952,7 @@ function renderGmBody(){
       const g=calcGrade(t);
       return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${escapeHtml(g)} ${t.toFixed(2)}</span></td>`;
     }).join('');
-    return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openGmDetail('ero', this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
+    return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openEroAch(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada ERO yang cocok.</td></tr>`;
 
   const ORDER=['Perfect','Good','Need Improve','Bad','Poor'];
@@ -1964,37 +1966,6 @@ function renderGmBody(){
   const allVals=months.map(k=>[...people.values()].map(p=>p.cells[k]).filter(v=>v!==undefined));
   const avgCells=allVals.map(vals=>`<td>${vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2):'–'}</td>`).join('');
   const countCells=allVals.map(vals=>`<td>${vals.length}</td>`).join('');
-
-  // ---- Produktivitas per toko ----
-  const stores=new Map();
-  months.forEach(k=>{
-    byMonth[k].forEach(r=>{
-      const st=r.store||'(tanpa toko)';
-      if(!stores.has(st)) stores.set(st,{name:st,cells:{}});
-      const s=stores.get(st);
-      const c=s.cells[k]||{sum:0,n:0};
-      c.sum+=gmTotal(r); c.n+=1; s.cells[k]=c;
-    });
-  });
-  const storeList=[...stores.values()].filter(s=>!q || s.name.toLowerCase().includes(q) || [...people.values()].some(p=>p.store===s.name && p.name.toLowerCase().includes(q)));
-  storeList.sort((a,b)=>{
-    const ca=a.cells[curKey], cb=b.cells[curKey];
-    const va=ca?ca.sum/ca.n:-1, vb=cb?cb.sum/cb.n:-1;
-    if(vb!==va) return vb-va;
-    return a.name.localeCompare(b.name);
-  });
-  const storeRows=storeList.map(s=>{
-    const cells=months.map(k=>{
-      const c=s.cells[k];
-      if(!c) return '<td><span class="gm-empty">–</span></td>';
-      return `<td><b class="gm-avg">${(c.sum/c.n).toFixed(2)}</b><div class="gm-store">${c.n} ERO</div></td>`;
-    }).join('');
-    const clickable = s.name!=='(tanpa toko)';
-    const nameCell = clickable
-      ? `<button type="button" class="gm-name" data-name="${escapeHtml(s.name)}" onclick="openGmDetail('store', this.dataset.name)">${escapeHtml(s.name)}</button>`
-      : escapeHtml(s.name);
-    return `<tr><td class="gm-name-col">${nameCell}</td>${cells}</tr>`;
-  }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada toko yang cocok.</td></tr>`;
 
   body.innerHTML=`
     <div class="gm-section-title">Daftar ERO</div>
@@ -2015,13 +1986,7 @@ function renderGmBody(){
         </tbody>
       </table>
     </div>
-    <div class="gm-section-title">Produktivitas per toko <span class="gm-hint">rata-rata poin ERO di toko, dan jumlah ERO</span></div>
-    <div class="table-scroll gm-scroll">
-      <table class="gm-table">
-        <thead><tr><th class="gm-name-col">Toko</th>${head}</tr></thead>
-        <tbody>${storeRows}</tbody>
-      </table>
-    </div>`;
+`;
 }
 
 // ---- Detail achievement per bulan (ERO atau toko), dipicu dari klik nama di panel Grade ERO per Bulan ----
@@ -2378,6 +2343,7 @@ function renderWeeklyPanel(){
     el.className='attn-wrap gm-wrap';
     sec.appendChild(el);
   }
+  applyAnalisisTab();
   const head=`<div class="attn-head"><div>
       <div class="attn-title"><i class="ti ti-calendar-week"></i> Ringkasan Mingguan</div>
       <div class="gm-sub">Diambil dari snapshot terakhir setiap minggu (Senin–Minggu), 12 minggu terakhir.</div>
@@ -2486,4 +2452,162 @@ function applyPerhatianTab(){
   document.querySelectorAll('#perhatianWrap .perh-tab').forEach(btn=>{
     btn.classList.toggle('on', btn.dataset.t===perhatianTab);
   });
+}
+
+// ---- Produktivitas per toko: dipindah ke menu Data Toko ----
+function renderStoreProductivity(){
+  const sec=document.querySelector('[data-view-section="stores"] .panel');
+  if(!sec) return;
+  let host=document.getElementById('storeProdPanel');
+  if(!host){
+    host=document.createElement('div');
+    host.id='storeProdPanel';
+    host.className='gm-wrap';
+    sec.appendChild(host);
+  }
+  const curKey=getCurrentMonthKey();
+  const archKeys=getDashboardArchiveMonths().filter(k=>k!==curKey).sort();
+  const months=[...archKeys, curKey];
+  const stores=new Map();
+  months.forEach(k=>{
+    gmSourceRows(k,'').forEach(r=>{
+      const st=r.store||'(tanpa toko)';
+      if(!stores.has(st)) stores.set(st,{name:st,cells:{}});
+      const s=stores.get(st);
+      const c=s.cells[k]||{sum:0,n:0};
+      c.sum+=gmTotal(r); c.n+=1;
+      s.cells[k]=c;
+    });
+  });
+  if(stores.size===0){ host.innerHTML=''; return; }
+  const storeList=[...stores.values()].sort((a,b)=>{
+    const ca=a.cells[curKey], cb=b.cells[curKey];
+    const va=ca?ca.sum/ca.n:-1, vb=cb?cb.sum/cb.n:-1;
+    if(vb!==va) return vb-va;
+    return a.name.localeCompare(b.name);
+  });
+  const head=months.map(k=>`<th class="${k===curKey?'gm-cur':''}">${escapeHtml(gmMonthLabel(k))}</th>`).join('');
+  const rowsHtml=storeList.map(s=>{
+    const cells=months.map(k=>{
+      const c=s.cells[k];
+      if(!c) return '<td><span class="gm-empty">–</span></td>';
+      return `<td><b class="gm-avg">${(c.sum/c.n).toFixed(2)}</b><div class="gm-store">${c.n} ERO</div></td>`;
+    }).join('');
+    const clickable=s.name!=='(tanpa toko)';
+    const nameCell=clickable
+      ? `<button type="button" class="gm-name" data-name="${escapeHtml(s.name)}" onclick="openStoreModal(this.dataset.name)">${escapeHtml(s.name)}</button>`
+      : escapeHtml(s.name);
+    return `<tr><td class="gm-name-col">${nameCell}</td>${cells}</tr>`;
+  }).join('');
+  host.innerHTML=`
+    <div class="gm-section-title">Produktivitas per toko <span class="gm-hint">rata-rata poin ERO di toko, dan jumlah ERO. Klik nama toko untuk detail.</span></div>
+    <div class="table-scroll gm-scroll">
+      <table class="gm-table">
+        <thead><tr><th class="gm-name-col">Toko</th>${head}</tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+// ---- Analisis: tiga tab (Tren & Perbandingan | Grade per Bulan | Ringkasan Mingguan) ----
+let analisisTab='trend';
+function setAnalisisTab(t){ analisisTab=t; applyAnalisisTab(); }
+function applyAnalisisTab(){
+  const sec=document.querySelector('[data-view-section="compare"] .panel');
+  if(!sec) return;
+  let bar=document.getElementById('analisisTabs');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='analisisTabs';
+    bar.className='perh-tabs analisis-tabs';
+    bar.innerHTML=`
+      <button type="button" class="perh-tab" data-t="trend" onclick="setAnalisisTab('trend')"><i class="ti ti-chart-line"></i> Tren &amp; Perbandingan</button>
+      <button type="button" class="perh-tab" data-t="grade" onclick="setAnalisisTab('grade')"><i class="ti ti-calendar-stats"></i> Grade per Bulan</button>
+      <button type="button" class="perh-tab" data-t="weekly" onclick="setAnalisisTab('weekly')"><i class="ti ti-calendar-week"></i> Ringkasan Mingguan</button>`;
+    const title=sec.firstElementChild;
+    if(title) title.insertAdjacentElement('afterend', bar); else sec.prepend(bar);
+  }
+  bar.querySelectorAll('.perh-tab').forEach(btn=>btn.classList.toggle('on', btn.dataset.t===analisisTab));
+  const title=sec.firstElementChild;
+  [...sec.children].forEach(child=>{
+    if(child===title || child===bar) { child.style.display=''; return; }
+    let show;
+    if(child.id==='gradeMonthPanel') show = analisisTab==='grade';
+    else if(child.id==='weeklyPanel') show = analisisTab==='weekly';
+    else show = analisisTab==='trend';
+    child.style.display = show ? '' : 'none';
+  });
+}
+
+// ---- Perbandingan bulan dipindah dari Arsip ke Analisis (tab Tren & Perbandingan) ----
+function moveMonthlyCompareIntoAnalisis(){
+  const src=document.querySelector('[data-view-section="monthly"] .panel');
+  const sec=document.querySelector('[data-view-section="compare"] .panel');
+  if(!src || !sec) return;
+  src.id='monthlyComparePanel';
+  sec.appendChild(src);
+  const arsip=document.querySelector('[data-view-section="monthly"]');
+  if(arsip && !document.getElementById('arsipMovedNote')){
+    arsip.innerHTML=`<div class="panel" id="arsipMovedNote">
+      <h2><i class="ti ti-archive"></i>Arsip</h2>
+      <div class="gm-sub">Perbandingan bulan sebelumnya vs bulan berjalan sekarang ada di menu Analisis, tab Tren &amp; Perbandingan.</div>
+      <button type="button" class="gmd-link" onclick="gotoAnalisisCompare()"><i class="ti ti-chart-line"></i> Buka Analisis</button>
+    </div>`;
+  }
+  applyAnalisisTab();
+  if(typeof renderMonthlyCompare==='function') renderMonthlyCompare();
+}
+function gotoAnalisisCompare(){
+  document.querySelector('.nav-item[data-view="compare"]')?.click();
+  setAnalisisTab('trend');
+}
+
+// ---- Popup ERO sebagai detail tunggal: tab Tren | Achievement per Bulan | Riwayat ----
+function openEroAch(name){
+  window._pendingPersonTab='ach';
+  openPersonModal(name);
+}
+const _openPersonModalBase = openPersonModal;
+openPersonModal = function(name){
+  _openPersonModalBase(name);
+  const tab=window._pendingPersonTab || 'trend';
+  window._pendingPersonTab=null;
+  mountPersonTabs(name, tab);
+};
+function mountPersonTabs(name, tab){
+  const chart=document.getElementById('personModalChart');
+  const list=document.getElementById('personModalList');
+  if(!chart || !list) return;
+  const box=list.parentElement;
+  let bar=document.getElementById('personTabs');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='personTabs';
+    bar.className='perh-tabs person-tabs';
+    bar.innerHTML=`
+      <button type="button" class="perh-tab" data-t="trend" onclick="setPersonTab('trend')">Tren</button>
+      <button type="button" class="perh-tab" data-t="ach" onclick="setPersonTab('ach')">Achievement per Bulan</button>
+      <button type="button" class="perh-tab" data-t="list" onclick="setPersonTab('list')">Riwayat</button>`;
+    box.insertBefore(bar, chart);
+  }
+  let ach=document.getElementById('personAch');
+  if(!ach){
+    ach=document.createElement('div');
+    ach.id='personAch';
+    ach.innerHTML='<div id="gmDetail"></div>';
+    chart.insertAdjacentElement('afterend', ach);
+  }
+  const keys=gmMonthKeys();
+  gmDetail={type:'ero', name, from:keys[Math.max(0,keys.length-3)], to:keys[keys.length-1], focus:null};
+  renderGmDetail(false);
+  setPersonTab(tab);
+}
+function setPersonTab(t){
+  const chart=document.getElementById('personModalChart');
+  const list=document.getElementById('personModalList');
+  const ach=document.getElementById('personAch');
+  if(chart) chart.style.display = t==='trend' ? '' : 'none';
+  if(ach) ach.style.display = t==='ach' ? '' : 'none';
+  if(list) list.style.display = t==='list' ? '' : 'none';
+  document.querySelectorAll('#personTabs .perh-tab').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
 }
