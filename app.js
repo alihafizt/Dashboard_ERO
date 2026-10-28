@@ -2240,14 +2240,15 @@ function setAttnLimit(v){ attnLimit=Number(v)||80; renderAttentionPanel(); }
 function renderAttentionPanel(){
   const sec=document.querySelector('[data-view-section="eros"] .panel');
   if(!sec || !rows || !rows.length) return;
+  const wrapA=ensurePerhatianWrap(sec);
   let el=document.getElementById('attnPanel');
   if(!el){
     el=document.createElement('div');
     el.id='attnPanel';
     el.className='attn-wrap';
-    const bar=sec.querySelector('.filter-bar');
-    if(bar) bar.insertAdjacentElement('afterend', el); else sec.prepend(el);
+    if(wrapA) wrapA.appendChild(el); else sec.prepend(el);
   }
+  applyPerhatianTab();
   const f=attnCat;
   const active=rows.filter(r=>r && r.name && r.active!==false);
   const withTarget=active.map(r=>{
@@ -2315,6 +2316,7 @@ function renderTrendWarnPanel(){
     el.className='attn-wrap';
     const anchor=document.getElementById('attnPanel') || sec.querySelector('.filter-bar');
     if(anchor) anchor.insertAdjacentElement('afterend', el); else sec.prepend(el);
+    applyPerhatianTab();
   }
   const head=`<div class="attn-head"><div>
       <div class="attn-title"><i class="ti ti-trending-down"></i> Peringatan Tren Menurun</div>
@@ -2454,3 +2456,34 @@ function reorderNav(){
   });
 }
 reorderNav();
+
+// ---- Data ERO: satu area "Perhatian" dengan dua tab (Capaian per kategori / Tren menurun) ----
+let perhatianTab='cat';
+function ensurePerhatianWrap(sec){
+  let wrap=document.getElementById('perhatianWrap');
+  if(wrap) return wrap;
+  const anchor=sec.querySelector('.filter-bar');
+  if(!anchor) return null;
+  wrap=document.createElement('div');
+  wrap.id='perhatianWrap';
+  wrap.className='perhatian-wrap';
+  wrap.innerHTML=`<div class="perh-tabs">
+      <button type="button" class="perh-tab" data-t="cat" onclick="setPerhatianTab('cat')">Capaian per Kategori</button>
+      <button type="button" class="perh-tab" data-t="trend" onclick="setPerhatianTab('trend')">Tren Menurun</button>
+    </div>`;
+  anchor.insertAdjacentElement('afterend', wrap);
+  return wrap;
+}
+function setPerhatianTab(t){
+  perhatianTab=t;
+  applyPerhatianTab();
+}
+function applyPerhatianTab(){
+  const a=document.getElementById('attnPanel');
+  const b=document.getElementById('trendWarnPanel');
+  if(a) a.style.display = perhatianTab==='cat' ? '' : 'none';
+  if(b) b.style.display = perhatianTab==='trend' ? '' : 'none';
+  document.querySelectorAll('#perhatianWrap .perh-tab').forEach(btn=>{
+    btn.classList.toggle('on', btn.dataset.t===perhatianTab);
+  });
+}
