@@ -102,6 +102,7 @@ async function verifyAdmin(user){
   isAdmin=ok;
   updateAdminUI();
   render();
+  loadWarningLetters();
 }
 function syncMessage(msg,ok=true){const el=document.getElementById('syncStatus');if(!el)return;el.textContent=msg||'';el.className='upload-status '+(ok?'ok':'err');}
 function updateAdminUI(){document.getElementById('adminPanel').style.display=isAdmin?'block':'none';document.getElementById('adminBtnLabel').textContent=isAdmin?'Logout':'Login Admin';const badge=document.getElementById('modeBadge');badge.textContent=isAdmin?'Mode admin':'Mode lihat saja';badge.className='mode-badge '+(isAdmin?'admin':'view');const navSettings=document.getElementById('navSettings');if(navSettings){navSettings.style.display=isAdmin?'flex':'none';if(!isAdmin&&currentView==='settings')switchView('dashboard');}updateSnapshotReminder();}
@@ -366,6 +367,7 @@ function render(){
   renderAttentionPanel();
   renderTrendWarnPanel();
   renderStoreProductivity();
+  renderSuratNote();
   const allWithTotals=rows.map((r,i)=>({...r,total:calcTotal(r),idx:i}));
   const activeRows=allWithTotals.filter(isActive);
   const sorted=activeRows.slice().sort((a,b)=>b.total-a.total);
@@ -2539,75 +2541,277 @@ function applyAnalisisTab(){
   });
 }
 
-// ---- Perbandingan bulan dipindah dari Arsip ke Analisis (tab Tren & Perbandingan) ----
+// ---- Menu Arsip dihapus: isinya (perbandingan bulan) dipindah ke Analisis, tab Tren & Perbandingan ----
 function moveMonthlyCompareIntoAnalisis(){
-  const src=document.querySelector('[data-view-section="monthly"] .panel');
+  const monthlySec=document.querySelector('[data-view-section="monthly"]');
   const sec=document.querySelector('[data-view-section="compare"] .panel');
-  if(!src || !sec) return;
-  src.id='monthlyComparePanel';
-  sec.appendChild(src);
-  const arsip=document.querySelector('[data-view-section="monthly"]');
-  if(arsip && !document.getElementById('arsipMovedNote')){
-    arsip.innerHTML=`<div class="panel" id="arsipMovedNote">
-      <h2><i class="ti ti-archive"></i>Arsip</h2>
-      <div class="gm-sub">Perbandingan bulan sebelumnya vs bulan berjalan sekarang ada di menu Analisis, tab Tren &amp; Perbandingan.</div>
-      <button type="button" class="gmd-link" onclick="gotoAnalisisCompare()"><i class="ti ti-chart-line"></i> Buka Analisis</button>
-    </div>`;
+  if(!monthlySec || !sec) return;
+  let wrap=document.getElementById('monthlyComparePanel');
+  if(!wrap){
+    wrap=document.createElement('div');
+    wrap.id='monthlyComparePanel';
+    wrap.style.marginTop='18px';
+    sec.appendChild(wrap);
   }
+  while(monthlySec.firstChild) wrap.appendChild(monthlySec.firstChild);
+  monthlySec.remove();
+  document.querySelectorAll('.nav-item[data-view="monthly"]').forEach(el=>el.remove());
   applyAnalisisTab();
-  if(typeof renderMonthlyCompare==='function') renderMonthlyCompare();
+  if(typeof renderMonthlyCompare==='function'){
+    try{ renderMonthlyCompare(); }catch(e){ console.error(e); }
+  }
 }
-function gotoAnalisisCompare(){
-  document.querySelector('.nav-item[data-view="compare"]')?.click();
-  setAnalisisTab('trend');
-}
+try{ moveMonthlyCompareIntoAnalisis(); }catch(e){ console.error(e); }
 
-// ---- Popup ERO sebagai detail tunggal: tab Tren | Achievement per Bulan | Riwayat ----
-function openEroAch(name){
-  window._pendingPersonTab='ach';
-  openPersonModal(name);
+// ---- Surat teguran ERO (khusus admin): teguran 1 sampai 3, masing-masing periode 3 bulan ----
+let warningLetters=[];
+const WL_BUCKET='warning-letters';
+let reportTab='laporan';
+function todayISO(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function addMonthsISO(iso,n){
+  const [y,m,d]=iso.split('-').map(Number);
+  const dt=new Date(y,m-1+n,d);
+  return new Date(dt.getTime()-dt.getTimezoneOffset()*60000).toISOString().slice(0,10);
 }
-const _openPersonModalBase = openPersonModal;
-openPersonModal = function(name){
-  _openPersonModalBase(name);
-  const tab=window._pendingPersonTab || 'trend';
-  window._pendingPersonTab=null;
-  mountPersonTabs(name, tab);
-};
-function mountPersonTabs(name, tab){
-  const chart=document.getElementById('personModalChart');
-  const list=document.getElementById('personModalList');
-  if(!chart || !list) return;
-  const box=list.parentElement;
-  let bar=document.getElementById('personTabs');
+function fmtDateID(iso){
+  if(!iso) return '–';
+  const [y,m,d]=iso.split('-').map(Number);
+  return new Date(y,m-1,d).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+}
+async function loadWarningLetters(){
+  if(!SUPABASE_READY || !isAdmin){
+    warningLetters=[];
+    renderSuratNote(); renderSuratWrap();
+    return;
+  }
+  const {data,error}=await sb.from('warning_letters').select('*').order('issued_on',{ascending:false});
+  if(error){ console.error(error); warningLetters=[]; }
+  else warningLetters=data||[];
+  renderSuratNote(); renderSuratWrap();
+}
+function renderSuratNote(){
+  const sec=document.querySelector('[data-view-section="eros"] .panel');
+  if(!sec) return;
+  let el=document.getElementById('suratNote');
+  if(!el){
+    el=document.createElement('div');
+    el.id='suratNote';
+    el.className='attn-wrap';
+    const anchor=document.getElementById('perhatianWrap') || sec.querySelector('.filter-bar');
+    if(anchor) anchor.insertAdjacentElement('afterend', el); else sec.prepend(el);
+  }
+  if(!isAdmin){ el.style.display='none'; return; }
+  el.style.display='';
+  const today=todayISO();
+  const seen=new Set();
+  const list=warningLetters
+    .filter(l=>l.status==='aktif')
+    .sort((a,b)=>b.letter_no-a.letter_no)
+    .filter(l=>{ if(seen.has(l.ero_name)) return false; seen.add(l.ero_name); return true; });
+  const body=list.length ? list.map(l=>{
+    const due=l.review_on<=today;
+    return `<tr>
+      <td class="attn-name">${escapeHtml(l.ero_name)}<div class="gm-store">${escapeHtml(l.store||'')}</div></td>
+      <td><span class="grade bad">Teguran ${l.letter_no}</span></td>
+      <td>${fmtDateID(l.issued_on)}</td>
+      <td>${fmtDateID(l.review_on)}${due?' <b class="tp-behind">jatuh tempo</b>':''}</td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="4" class="gm-empty-box">Tidak ada ERO yang sedang mendapat surat teguran.</td></tr>`;
+  el.innerHTML=`
+    <div class="attn-head"><div>
+      <div class="attn-title"><i class="ti ti-mail-exclamation"></i> Status surat teguran</div>
+      <div class="gm-sub">Hanya terlihat admin. Buat, evaluasi, dan lihat foto surat di Report, sub menu Surat Teguran.</div>
+    </div></div>
+    <div class="table-scroll gm-scroll attn-scroll">
+      <table class="gm-table attn-table">
+        <thead><tr><th>ERO</th><th>Status</th><th>Tanggal surat</th><th>Evaluasi ulang</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
+}
+function setReportTab(t){ reportTab=t; applyReportTab(); }
+function applyReportTab(){
+  const sec=document.querySelector('[data-view-section="reports"]');
+  if(!sec) return;
+  let bar=document.getElementById('reportTabs');
   if(!bar){
     bar=document.createElement('div');
-    bar.id='personTabs';
-    bar.className='perh-tabs person-tabs';
+    bar.id='reportTabs';
+    bar.className='perh-tabs';
     bar.innerHTML=`
-      <button type="button" class="perh-tab" data-t="trend" onclick="setPersonTab('trend')">Tren</button>
-      <button type="button" class="perh-tab" data-t="ach" onclick="setPersonTab('ach')">Achievement per Bulan</button>
-      <button type="button" class="perh-tab" data-t="list" onclick="setPersonTab('list')">Riwayat</button>`;
-    box.insertBefore(bar, chart);
+      <button type="button" class="perh-tab" data-t="laporan" onclick="setReportTab('laporan')">Laporan</button>
+      <button type="button" class="perh-tab" data-t="surat" onclick="setReportTab('surat')">Surat Teguran</button>`;
+    sec.prepend(bar);
   }
-  let ach=document.getElementById('personAch');
-  if(!ach){
-    ach=document.createElement('div');
-    ach.id='personAch';
-    ach.innerHTML='<div id="gmDetail"></div>';
-    chart.insertAdjacentElement('afterend', ach);
+  let wrap=document.getElementById('suratWrap');
+  if(!wrap){
+    wrap=document.createElement('div');
+    wrap.id='suratWrap';
+    wrap.style.marginTop='18px';
+    sec.appendChild(wrap);
+    renderSuratWrap();
   }
-  const keys=gmMonthKeys();
-  gmDetail={type:'ero', name, from:keys[Math.max(0,keys.length-3)], to:keys[keys.length-1], focus:null};
-  renderGmDetail(false);
-  setPersonTab(tab);
+  bar.querySelectorAll('.perh-tab').forEach(b=>b.classList.toggle('on', b.dataset.t===reportTab));
+  [...sec.children].forEach(ch=>{
+    if(ch===bar) return;
+    if(ch.id==='suratWrap'){ ch.style.display = reportTab==='surat' ? '' : 'none'; return; }
+    ch.style.display = reportTab==='laporan' ? '' : 'none';
+  });
 }
-function setPersonTab(t){
-  const chart=document.getElementById('personModalChart');
-  const list=document.getElementById('personModalList');
-  const ach=document.getElementById('personAch');
-  if(chart) chart.style.display = t==='trend' ? '' : 'none';
-  if(ach) ach.style.display = t==='ach' ? '' : 'none';
-  if(list) list.style.display = t==='list' ? '' : 'none';
-  document.querySelectorAll('#personTabs .perh-tab').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+function renderSuratWrap(){
+  const wrap=document.getElementById('suratWrap');
+  if(!wrap) return;
+  if(!isAdmin){ wrap.innerHTML='<div class="gm-empty-box">Surat teguran hanya bisa dibuka oleh admin.</div>'; return; }
+  const today=todayISO();
+  const names=[...new Set(rows.filter(r=>r && r.name && r.active!==false).map(r=>r.name))].sort((a,b)=>a.localeCompare(b));
+  const list=[...warningLetters].sort((a,b)=>a.ero_name.localeCompare(b.ero_name) || a.letter_no-b.letter_no);
+  const statusTxt={aktif:'Aktif', selesai:'Membaik', lanjut:'Lanjut ke teguran berikutnya'};
+  const body=list.map(l=>{
+    const due=l.status==='aktif' && l.review_on<=today;
+    const photo=l.photo_path
+      ? `<button type="button" class="gmd-link" onclick="openLetterPhoto('${l.id}')"><i class="ti ti-photo"></i> Lihat</button>`
+      : `<button type="button" class="gmd-link" onclick="attachLetterPhoto('${l.id}')"><i class="ti ti-upload"></i> Unggah</button>`;
+    const actions=l.status==='aktif'
+      ? `<button type="button" class="gmd-link" onclick="markLetterImproved('${l.id}')">Membaik</button>
+         <button type="button" class="gmd-link" onclick="escalateLetter('${l.id}')">Tidak membaik</button>`
+      : '<span class="gm-empty">–</span>';
+    return `<tr>
+      <td class="attn-name">${escapeHtml(l.ero_name)}<div class="gm-store">${escapeHtml(l.store||'')}</div></td>
+      <td>Teguran ${l.letter_no}</td>
+      <td>${fmtDateID(l.issued_on)}</td>
+      <td>${fmtDateID(l.review_on)}${due?' <b class="tp-behind">jatuh tempo</b>':''}</td>
+      <td>${escapeHtml(statusTxt[l.status]||l.status)}</td>
+      <td>${photo}</td>
+      <td class="wl-actions">${actions}</td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="7" class="gm-empty-box">Belum ada surat teguran.</td></tr>`;
+  wrap.innerHTML=`
+    <div class="attn-wrap">
+      <div class="attn-title"><i class="ti ti-mail-plus"></i> Buat surat teguran</div>
+      <div class="gm-sub">Teguran 1 sampai 3, masing-masing periode 3 bulan. Jika ERO membaik, surat selesai. Jika belum, pilih "Tidak membaik" untuk lanjut ke teguran berikutnya.</div>
+      <div class="wl-form">
+        <label>ERO <input id="wlName" list="eroNames" placeholder="Ketik nama ERO"></label>
+        <label>Toko <input id="wlStore" placeholder="Nama toko"></label>
+        <label>Tanggal surat <input id="wlIssued" type="date" value="${today}"></label>
+        <label>Evaluasi ulang <input id="wlReview" type="date" value="${addMonthsISO(today,3)}"></label>
+        <label class="wl-wide">Catatan <textarea id="wlNote" rows="2"></textarea></label>
+        <label class="wl-wide">Foto surat fisik (JPG, PNG, atau PDF, maks. 5 MB) <input id="wlFile" type="file" accept="image/jpeg,image/png,application/pdf"></label>
+      </div>
+      <div class="wl-msg" id="wlMsg"></div>
+      <button type="button" class="gmd-link" onclick="saveNewLetter()"><i class="ti ti-device-floppy"></i> Simpan surat</button>
+      <datalist id="eroNames">${names.map(n=>`<option value="${escapeHtml(n)}">`).join('')}</datalist>
+    </div>
+    <div class="table-scroll gm-scroll attn-scroll">
+      <table class="gm-table attn-table">
+        <thead><tr><th>ERO</th><th>Teguran</th><th>Tanggal surat</th><th>Evaluasi ulang</th><th>Status</th><th>Foto</th><th>Aksi</th></tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`;
 }
+function nextLetterNoFor(name){
+  const mine=warningLetters.filter(l=>l.ero_name===name);
+  if(mine.some(l=>l.status==='aktif')) return {error:'ERO ini masih punya surat aktif. Selesaikan dulu surat tersebut.'};
+  const last=[...mine].sort((a,b)=>b.letter_no-a.letter_no)[0];
+  if(last && last.status==='lanjut'){
+    if(last.letter_no>=3) return {error:'ERO ini sudah mencapai teguran 3.'};
+    return {no:last.letter_no+1};
+  }
+  return {no:1};
+}
+function wlShow(t,ok){
+  const m=document.getElementById('wlMsg');
+  if(!m) return;
+  m.textContent=t;
+  m.style.color= ok ? 'var(--text-success)' : 'var(--text-danger)';
+}
+async function uploadLetterFile(id,file){
+  const safe=file.name.replace(/[^A-Za-z0-9._-]/g,'_');
+  const path=`${id}/${safe}`;
+  const {error}=await sb.storage.from(WL_BUCKET).upload(path,file,{upsert:true, contentType:file.type});
+  if(error){ console.error(error); return null; }
+  return path;
+}
+async function saveNewLetter(){
+  if(!isAdmin){ wlShow('Hanya admin yang bisa menyimpan surat.',false); return; }
+  const name=(document.getElementById('wlName').value||'').trim();
+  const store=(document.getElementById('wlStore').value||'').trim();
+  const issued=document.getElementById('wlIssued').value;
+  const review=document.getElementById('wlReview').value;
+  const note=(document.getElementById('wlNote').value||'').trim();
+  const file=document.getElementById('wlFile').files[0]||null;
+  if(!name){ wlShow('Pilih nama ERO dulu.',false); return; }
+  if(!issued || !review){ wlShow('Isi tanggal surat dan tanggal evaluasi ulang.',false); return; }
+  if(review<=issued){ wlShow('Tanggal evaluasi ulang harus setelah tanggal surat.',false); return; }
+  const lvl=nextLetterNoFor(name);
+  if(lvl.error){ wlShow(lvl.error,false); return; }
+  if(file){
+    if(file.size>5*1024*1024){ wlShow('Foto maksimal 5 MB.',false); return; }
+    if(!['image/jpeg','image/png','application/pdf'].includes(file.type)){ wlShow('Format foto harus JPG, PNG, atau PDF.',false); return; }
+  }
+  wlShow('Menyimpan...',true);
+  const id=crypto.randomUUID();
+  const {error}=await sb.from('warning_letters').insert({
+    id, ero_name:name, store:store||null, letter_no:lvl.no,
+    status:'aktif', issued_on:issued, review_on:review, note:note||null
+  });
+  if(error){ console.error(error); wlShow('Gagal menyimpan: '+error.message,false); return; }
+  if(file){
+    const path=await uploadLetterFile(id,file);
+    if(!path){ wlShow('Surat tersimpan, tetapi foto gagal diunggah. Gunakan tombol Unggah di tabel.',false); await loadWarningLetters(); return; }
+    await sb.from('warning_letters').update({photo_path:path}).eq('id',id);
+  }
+  await loadWarningLetters();
+  wlShow('Surat tersimpan.',true);
+}
+function attachLetterPhoto(id){
+  const inp=document.createElement('input');
+  inp.type='file';
+  inp.accept='image/jpeg,image/png,application/pdf';
+  inp.onchange=async()=>{
+    const f=inp.files[0];
+    if(!f) return;
+    if(f.size>5*1024*1024){ alert('Foto maksimal 5 MB.'); return; }
+    if(!['image/jpeg','image/png','application/pdf'].includes(f.type)){ alert('Format foto harus JPG, PNG, atau PDF.'); return; }
+    const path=await uploadLetterFile(id,f);
+    if(!path){ alert('Upload foto gagal.'); return; }
+    const {error}=await sb.from('warning_letters').update({photo_path:path}).eq('id',id);
+    if(error){ alert('Gagal menyimpan lokasi foto: '+error.message); return; }
+    await loadWarningLetters();
+  };
+  inp.click();
+}
+async function openLetterPhoto(id){
+  const l=warningLetters.find(x=>x.id===id);
+  if(!l || !l.photo_path) return;
+  const {data,error}=await sb.storage.from(WL_BUCKET).createSignedUrl(l.photo_path, 300);
+  if(error || !data){ alert('Foto tidak bisa dibuka.'); return; }
+  window.open(data.signedUrl,'_blank','noopener');
+}
+async function markLetterImproved(id){
+  if(!confirm('Tandai ERO ini sudah membaik? Surat teguran dinyatakan selesai.')) return;
+  const {error}=await sb.from('warning_letters').update({status:'selesai', resolved_on:todayISO()}).eq('id',id);
+  if(error){ alert('Gagal: '+error.message); return; }
+  await loadWarningLetters();
+}
+async function escalateLetter(id){
+  const l=warningLetters.find(x=>x.id===id);
+  if(!l) return;
+  const today=todayISO();
+  if(l.letter_no>=3){
+    if(!confirm('Ini sudah teguran 3 (tertinggi). Tandai sebagai tindak lanjut?')) return;
+    const {error}=await sb.from('warning_letters').update({status:'lanjut', resolved_on:today}).eq('id',id);
+    if(error){ alert('Gagal: '+error.message); return; }
+    await loadWarningLetters();
+    return;
+  }
+  if(!confirm(`ERO belum membaik. Lanjutkan ke Teguran ${l.letter_no+1}?`)) return;
+  const {error:e1}=await sb.from('warning_letters').update({status:'lanjut', resolved_on:today}).eq('id',id);
+  if(e1){ alert('Gagal: '+e1.message); return; }
+  const {error:e2}=await sb.from('warning_letters').insert({
+    id:crypto.randomUUID(), ero_name:l.ero_name, store:l.store||null,
+    letter_no:l.letter_no+1, status:'aktif', issued_on:today, review_on:addMonthsISO(today,3)
+  });
+  if(e2){ alert('Teguran berikutnya gagal dibuat: '+e2.message+'. Buat manual dari form.'); }
+  await loadWarningLetters();
+}
+try{ applyReportTab(); }catch(e){ console.error(e); }

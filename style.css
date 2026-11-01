@@ -1513,3 +1513,12 @@
 .perh-tab { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border-light); background: transparent; color: var(--text-muted); font-size: 12.5px; font-weight: 700; cursor: pointer; box-shadow: none; transform: none; }
 .perh-tab:hover { color: var(--text-main); transform: none; box-shadow: none; }
 .perh-tab.on { border-color: var(--brand); color: var(--brand); background: rgba(245, 158, 11, 0.10); }
+
+/* ---- Surat teguran ---- */
+.wl-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px 14px; margin: 12px 0; }
+.wl-form label { font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; gap: 4px; }
+.wl-form input, .wl-form textarea { width: 100%; font-size: 13px; }
+.wl-form .wl-wide { grid-column: 1 / -1; }
+.wl-msg { font-size: 12.5px; min-height: 18px; margin-bottom: 8px; }
+.wl-actions { white-space: nowrap; }
+.wl-actions .gmd-link { margin-right: 4px; }
