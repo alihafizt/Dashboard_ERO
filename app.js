@@ -2581,13 +2581,13 @@ function fmtDateID(iso){
 async function loadWarningLetters(){
   if(!SUPABASE_READY || !isAdmin){
     warningLetters=[];
-    renderSuratNote(); renderSuratWrap();
+    renderSuratNote(); renderSuratWrap(); updateSuratBadge();
     return;
   }
   const {data,error}=await sb.from('warning_letters').select('*').order('issued_on',{ascending:false});
   if(error){ console.error(error); warningLetters=[]; }
   else warningLetters=data||[];
-  renderSuratNote(); renderSuratWrap();
+  renderSuratNote(); renderSuratWrap(); updateSuratBadge();
 }
 function renderSuratNote(){
   const sec=document.querySelector('[data-view-section="eros"] .panel');
@@ -2652,6 +2652,7 @@ function applyReportTab(){
     renderSuratWrap();
   }
   bar.querySelectorAll('.perh-tab').forEach(b=>b.classList.toggle('on', b.dataset.t===reportTab));
+  updateSuratBadge();
   [...sec.children].forEach(ch=>{
     if(ch===bar) return;
     if(ch.id==='suratWrap'){ ch.style.display = reportTab==='surat' ? '' : 'none'; return; }
@@ -2674,7 +2675,8 @@ function renderSuratWrap(){
     const actions=l.status==='aktif'
       ? `<button type="button" class="gmd-link" onclick="markLetterImproved('${l.id}')">Membaik</button>
          <button type="button" class="gmd-link" onclick="escalateLetter('${l.id}')">Tidak membaik</button>`
-      : '<span class="gm-empty">–</span>';
+      : '';
+    const del=`<button type="button" class="gmd-link" onclick="deleteLetter('${l.id}')">Hapus</button>`;
     return `<tr>
       <td class="attn-name">${escapeHtml(l.ero_name)}<div class="gm-store">${escapeHtml(l.store||'')}</div></td>
       <td>Teguran ${l.letter_no}</td>
@@ -2682,7 +2684,7 @@ function renderSuratWrap(){
       <td>${fmtDateID(l.review_on)}${due?' <b class="tp-behind">jatuh tempo</b>':''}</td>
       <td>${escapeHtml(statusTxt[l.status]||l.status)}</td>
       <td>${photo}</td>
-      <td class="wl-actions">${actions}</td>
+      <td class="wl-actions">${actions}${del}</td>
     </tr>`;
   }).join('') || `<tr><td colspan="7" class="gm-empty-box">Belum ada surat teguran.</td></tr>`;
   wrap.innerHTML=`
@@ -2690,7 +2692,7 @@ function renderSuratWrap(){
       <div class="attn-title"><i class="ti ti-mail-plus"></i> Buat surat teguran</div>
       <div class="gm-sub">Teguran 1 sampai 3, masing-masing periode 3 bulan. Jika ERO membaik, surat selesai. Jika belum, pilih "Tidak membaik" untuk lanjut ke teguran berikutnya.</div>
       <div class="wl-form">
-        <label>ERO <input id="wlName" list="eroNames" placeholder="Ketik nama ERO"></label>
+        <label>ERO <input id="wlName" list="eroNames" placeholder="Ketik nama ERO" oninput="fillStoreFromEro()" onchange="fillStoreFromEro()"></label>
         <label>Toko <input id="wlStore" placeholder="Nama toko"></label>
         <label>Tanggal surat <input id="wlIssued" type="date" value="${today}"></label>
         <label>Evaluasi ulang <input id="wlReview" type="date" value="${addMonthsISO(today,3)}"></label>
@@ -2734,7 +2736,7 @@ async function uploadLetterFile(id,file){
 async function saveNewLetter(){
   if(!isAdmin){ wlShow('Hanya admin yang bisa menyimpan surat.',false); return; }
   const name=(document.getElementById('wlName').value||'').trim();
-  const store=(document.getElementById('wlStore').value||'').trim();
+  const store=((document.getElementById('wlStore').value||'').trim()) || storeForEro(name);
   const issued=document.getElementById('wlIssued').value;
   const review=document.getElementById('wlReview').value;
   const note=(document.getElementById('wlNote').value||'').trim();
@@ -2815,3 +2817,49 @@ async function escalateLetter(id){
   await loadWarningLetters();
 }
 try{ applyReportTab(); }catch(e){ console.error(e); }
+
+// ---- Hapus surat teguran (dengan konfirmasi) dan pengingat surat jatuh tempo ----
+async function deleteLetter(id){
+  const l=warningLetters.find(x=>x.id===id);
+  if(!l) return;
+  if(!confirm(`Hapus surat Teguran ${l.letter_no} untuk ${l.ero_name}? Tindakan ini tidak bisa dibatalkan.`)) return;
+  if(l.photo_path){
+    const {error:se}=await sb.storage.from(WL_BUCKET).remove([l.photo_path]);
+    if(se){ alert('Gagal menghapus foto: '+se.message); return; }
+  }
+  const {error}=await sb.from('warning_letters').delete().eq('id',id);
+  if(error){ alert('Gagal menghapus surat: '+error.message); return; }
+  await loadWarningLetters();
+}
+function dueLetterCount(){
+  const today=todayISO();
+  return warningLetters.filter(l=>l.status==='aktif' && l.review_on<=today).length;
+}
+function updateSuratBadge(){
+  const n=dueLetterCount();
+  const btn=document.querySelector('#reportTabs .perh-tab[data-t="surat"]');
+  if(btn) btn.innerHTML='Surat Teguran' + (n ? ` <span class="wl-badge">${n}</span>` : '');
+  const nav=document.querySelector('.nav-item[data-view="reports"]');
+  if(nav){
+    let b=nav.querySelector('.wl-badge');
+    if(n){
+      if(!b){ b=document.createElement('span'); b.className='wl-badge'; nav.appendChild(b); }
+      b.textContent=n;
+    } else if(b){ b.remove(); }
+  }
+}
+
+// ---- Toko otomatis dari nama ERO di form surat teguran ----
+function storeForEro(name){
+  const n=(name||'').trim();
+  if(!n) return '';
+  const r=rows.find(x=>x.name===n && x.active!==false) || rows.find(x=>x.name===n);
+  return r && r.store ? r.store : '';
+}
+function fillStoreFromEro(){
+  const name=(document.getElementById('wlName')?.value||'').trim();
+  const storeEl=document.getElementById('wlStore');
+  if(!storeEl) return;
+  const found=storeForEro(name);
+  if(found) storeEl.value=found;
+}

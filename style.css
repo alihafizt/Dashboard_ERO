@@ -1522,3 +1522,4 @@
 .wl-msg { font-size: 12.5px; min-height: 18px; margin-bottom: 8px; }
 .wl-actions { white-space: nowrap; }
 .wl-actions .gmd-link { margin-right: 4px; }
+.wl-badge { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 6px; border-radius: 999px; background: #DC2626; color: #FFFFFF; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
