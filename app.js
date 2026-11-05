@@ -1906,6 +1906,25 @@ function renderGradeMonthPanel(){
         <h3><i class="ti ti-calendar-stats"></i> Grade ERO per Bulan</h3>
         <div class="gm-sub">Mengikuti filter store di atas. Bulan yang sudah lewat memakai arsip, bulan berjalan memakai data saat ini.</div>
       </div>
+      <div class="gm-filter-row">
+        <span class="gm-filter-label">Tampilkan ERO yang grade-nya</span>
+        <select id="gmRuleGrade" onchange="gmRuleChange()">
+          <option value="bp">Bad atau Poor</option>
+          <option value="poor">Poor saja</option>
+          <option value="bad">Bad saja</option>
+          <option value="nbp">Need Improve, Bad, atau Poor</option>
+          <option value="gp">Good atau Perfect</option>
+        </select>
+        <span class="gm-filter-label">selama</span>
+        <select id="gmRuleMonths" onchange="gmRuleChange()">
+          <option value="0">tidak difilter</option>
+          <option value="2">2 bulan berturut-turut</option>
+          <option value="3">3 bulan berturut-turut</option>
+          <option value="all">semua bulan yang ada</option>
+        </select>
+        <button type="button" class="gmd-link" onclick="gmRuleReset()">Reset</button>
+        <span class="gm-filter-count" id="gmRuleCount"></span>
+      </div>
       <div class="gm-search-row"><i class="ti ti-search"></i><input type="search" id="gmSearch" class="gm-search" placeholder="Cari nama ERO..." autocomplete="off"></div>
       <div id="gmBody"></div>`;
     sec.appendChild(el);
@@ -1937,7 +1956,9 @@ function renderGmBody(){
   });
   if(people.size===0){ body.innerHTML='<div class="gm-empty-box">Belum ada data untuk ditampilkan.</div>'; return; }
 
-  let list=[...people.values()].filter(p=>!q || p.name.toLowerCase().includes(q));
+  let list=[...people.values()].filter(p=>(!q || p.name.toLowerCase().includes(q)) && gmPassesRule(p, months));
+  const ruleCountEl=document.getElementById('gmRuleCount');
+  if(ruleCountEl) ruleCountEl.textContent = gmRuleMonths==='0' ? '' : `${list.length} ERO cocok`;
   list.sort((a,b)=>{
     const ta=a.cells[curKey], tb=b.cells[curKey];
     if(ta!==undefined && tb!==undefined && tb!==ta) return tb-ta;
@@ -2863,3 +2884,65 @@ function fillStoreFromEro(){
   const found=storeForEro(name);
   if(found) storeEl.value=found;
 }
+
+// ---- Filter grade berturut-turut per bulan (tab Grade per Bulan) ----
+const GM_GRADE_SETS={bp:['Bad','Poor'], poor:['Poor'], bad:['Bad'], nbp:['Need Improve','Bad','Poor'], gp:['Good','Perfect']};
+function gmPassesRule(p, months){
+  const m=(typeof gmRuleMonths!=='undefined') ? gmRuleMonths : '0';
+  if(m==='0') return true;
+  const set=GM_GRADE_SETS[gmRuleGrade] || [];
+  const n = m==='all' ? months.length : Number(m);
+  if(n<=0 || months.length<n) return false;
+  const last=months.slice(-n);
+  return last.every(k=>{ const t=p.cells[k]; return t!==undefined && set.includes(calcGrade(t)); });
+}
+let gmRuleGrade='bp', gmRuleMonths='0';
+function gmRuleChange(){
+  gmRuleGrade=document.getElementById('gmRuleGrade')?.value || 'bp';
+  gmRuleMonths=document.getElementById('gmRuleMonths')?.value || '0';
+  renderGmBody();
+}
+function gmRuleReset(){
+  gmRuleGrade='bp'; gmRuleMonths='0';
+  const g=document.getElementById('gmRuleGrade'); if(g) g.value='bp';
+  const m=document.getElementById('gmRuleMonths'); if(m) m.value='0';
+  renderGmBody();
+}
+
+// ---- Rapikan label kontrol Analisis (tanpa mengubah logika) ----
+function tidyAnalisisControls(){
+  const labels={
+    'Store dari Waktu ke Waktu':'Tren per store',
+    'ERO dari Waktu ke Waktu':'Tren per ERO',
+    'Perbandingan ERO dalam Store':'ERO dalam satu store',
+    'Tren':'Tren waktu',
+    'Bandingkan 2 Periode':'Bandingkan dua periode'
+  };
+  document.querySelectorAll('.cmp-tab').forEach(b=>{
+    const t=b.textContent.trim();
+    if(labels[t]) b.textContent=labels[t];
+  });
+  const rowsEl=document.querySelectorAll('.compare-mode-tabs');
+  if(rowsEl[0] && !rowsEl[0].previousElementSibling?.classList?.contains('cmp-step')){
+    const h=document.createElement('div'); h.className='cmp-step'; h.textContent='Yang ingin dilihat';
+    rowsEl[0].parentElement.insertBefore(h, rowsEl[0]);
+  }
+  if(rowsEl[1] && !rowsEl[1].previousElementSibling?.classList?.contains('cmp-step')){
+    const h=document.createElement('div'); h.className='cmp-step'; h.textContent='Cara menampilkan';
+    rowsEl[1].parentElement.insertBefore(h, rowsEl[1]);
+    const hint=document.createElement('div'); hint.className='cmp-hint';
+    hint.textContent='Tren waktu: lihat perubahan poin dari waktu ke waktu. Bandingkan dua periode: bandingkan dua rentang tanggal (periode utama A dan pembanding B).';
+    rowsEl[1].insertAdjacentElement('afterend', hint);
+  }
+  const dateRow=document.getElementById('cmpCustomDateRow');
+  if(dateRow){
+    const walker=document.createTreeWalker(dateRow, NodeFilter.SHOW_TEXT);
+    const nodes=[]; while(walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(n=>{
+      n.textContent=n.textContent
+        .replace(/Periode B/gi,'Pembanding (B)')
+        .replace(/Periode A/gi,'Utama (A)');
+    });
+  }
+}
+try{ tidyAnalisisControls(); }catch(e){ console.error(e); }
