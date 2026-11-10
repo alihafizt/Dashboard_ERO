@@ -1973,7 +1973,7 @@ function renderGmBody(){
       const t=p.cells[k];
       if(t===undefined) return '<td><span class="gm-empty">–</span></td>';
       const g=calcGrade(t);
-      return `<td><span class="grade ${gradeClass(g)}" title="${escapeHtml(g)}">${escapeHtml(g)} ${t.toFixed(2)}</span></td>`;
+      return `<td><span class="grade gmd-click ${gradeClass(g)}" title="Lihat target vs achievement" data-n="${escapeAttr(p.name)}" data-k="${escapeAttr(k)}" onclick="openGradeDetail(this.dataset.n, this.dataset.k)">${escapeHtml(g)} ${t.toFixed(2)}</span></td>`;
     }).join('');
     return `<tr><td class="gm-name-col"><button type="button" class="gm-name" data-name="${escapeHtml(p.name)}" onclick="openEroAch(this.dataset.name)">${escapeHtml(p.name)}</button><div class="gm-store">${escapeHtml(p.store||'')}</div></td>${cells}</tr>`;
   }).join('') || `<tr><td colspan="${months.length+1}" class="gm-empty-box">Tidak ada ERO yang cocok.</td></tr>`;
@@ -2946,3 +2946,122 @@ function tidyAnalisisControls(){
   }
 }
 try{ tidyAnalisisControls(); }catch(e){ console.error(e); }
+
+// ---- Popup ERO sebagai detail tunggal: tab Tren | Achievement per Bulan | Riwayat (dipulihkan) ----
+function openEroAch(name){
+  window._pendingPersonTab='ach';
+  openPersonModal(name);
+}
+const _openPersonModalBase = openPersonModal;
+openPersonModal = function(name){
+  _openPersonModalBase(name);
+  const tab=window._pendingPersonTab || 'trend';
+  window._pendingPersonTab=null;
+  mountPersonTabs(name, tab);
+};
+function mountPersonTabs(name, tab){
+  const chart=document.getElementById('personModalChart');
+  const list=document.getElementById('personModalList');
+  if(!chart || !list) return;
+  const box=list.parentElement;
+  let bar=document.getElementById('personTabs');
+  if(!bar){
+    bar=document.createElement('div');
+    bar.id='personTabs';
+    bar.className='perh-tabs person-tabs';
+    bar.innerHTML=`
+      <button type="button" class="perh-tab" data-t="trend" onclick="setPersonTab('trend')">Tren</button>
+      <button type="button" class="perh-tab" data-t="ach" onclick="setPersonTab('ach')">Achievement per Bulan</button>
+      <button type="button" class="perh-tab" data-t="list" onclick="setPersonTab('list')">Riwayat</button>`;
+    box.insertBefore(bar, chart);
+  }
+  let ach=document.getElementById('personAch');
+  if(!ach){
+    ach=document.createElement('div');
+    ach.id='personAch';
+    ach.innerHTML='<div id="personHighlight"></div><div id="gmDetail"></div>';
+    chart.insertAdjacentElement('afterend', ach);
+  }
+  const keys=gmMonthKeys();
+  renderPersonHighlight(name);
+  gmDetail={type:'ero', name, from:keys[Math.max(0,keys.length-3)], to:keys[keys.length-1], focus:null};
+  renderGmDetail(false);
+  setPersonTab(tab);
+}
+function setPersonTab(t){
+  const chart=document.getElementById('personModalChart');
+  const list=document.getElementById('personModalList');
+  const ach=document.getElementById('personAch');
+  if(chart) chart.style.display = t==='trend' ? '' : 'none';
+  if(ach) ach.style.display = t==='ach' ? '' : 'none';
+  if(list) list.style.display = t==='list' ? '' : 'none';
+  document.querySelectorAll('#personTabs .perh-tab').forEach(b=>b.classList.toggle('on', b.dataset.t===t));
+}
+
+// ---- Highlight rata-rata target vs achievement 3 bulan terakhir (popup ERO, tab Achievement) ----
+function renderPersonHighlight(name){
+  const host=document.getElementById('personHighlight');
+  if(!host) return;
+  const months=gmMonthKeys().slice(-3);
+  const found=months.map(k=>({k, r:gmRowsFor(k).find(x=>x.name===name && x.active!==false)})).filter(x=>x.r);
+  if(!found.length){ host.innerHTML='<div class="gm-empty-box">Belum ada data ERO untuk 3 bulan terakhir.</div>'; return; }
+  const rowsHtml=fields.map(f=>{
+    const ts=found.map(x=>Number(x.r.target?.[f])||0).filter(v=>v>0);
+    const as=found.map(x=>Number(x.r.ach?.[STORE_TARGET_ACH_MAP[f]])||0);
+    const avgT=ts.length ? ts.reduce((a,b)=>a+b,0)/ts.length : 0;
+    const avgA=as.length ? as.reduce((a,b)=>a+b,0)/as.length : 0;
+    return gmAchRow(GMD_LABELS[f]||f, avgT, avgA, avgT>0 ? avgA/avgT : null, false);
+  }).join('');
+  const span=`${gmMonthLabel(found[0].k)} – ${gmMonthLabel(found[found.length-1].k)}`;
+  host.innerHTML=`
+    <div class="gmd-box gm-highlight">
+      <div class="gmd-title"><i class="ti ti-target"></i> Rata-rata 3 bulan terakhir</div>
+      <div class="gmd-sub">${escapeHtml(span)} · ${found.length} bulan terdata</div>
+      <table class="gm-table gmd-ach-table">
+        <thead><tr><th>Kategori</th><th>Rata-rata target</th><th>Rata-rata achievement</th><th>%</th></tr></thead>
+        <tbody>${rowsHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+// ---- Klik grade di tabel Grade per Bulan: detail target vs achievement bulan itu ----
+function openGradeDetail(name, k){
+  const r=gmRowsFor(k).find(x=>x.name===name && x.active!==false);
+  let ov=document.getElementById('gradeDetailOverlay');
+  if(!ov){
+    ov=document.createElement('div');
+    ov.id='gradeDetailOverlay';
+    ov.className='modal-overlay';
+    ov.onclick=(e)=>{ if(e.target===ov) closeGradeDetail(); };
+    document.body.appendChild(ov);
+  }
+  let body='<div class="gm-empty-box">Tidak ada data ERO untuk bulan ini.</div>';
+  let sub='';
+  if(r){
+    const total=gmTotal(r), g=calcGrade(total);
+    sub=`${escapeHtml(gmMonthLabel(k))} · grade ${escapeHtml(g)} · poin ${total.toFixed(2)}`;
+    body=`<table class="gm-table gmd-ach-table">
+      <thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th></tr></thead>
+      <tbody>${fields.map(f=>{
+        const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
+        return gmAchRow(GMD_LABELS[f]||f, t, a, t>0 ? a/t : null, false);
+      }).join('')}</tbody>
+    </table>`;
+  }
+  ov.innerHTML=`
+    <div class="modal-box gdm-box">
+      <div class="gmd-top">
+        <div>
+          <div class="gmd-title"><i class="ti ti-user"></i> ${escapeHtml(name)}</div>
+          <div class="gmd-sub">${sub}</div>
+        </div>
+        <button type="button" class="gmd-close" onclick="closeGradeDetail()" aria-label="Tutup"><i class="ti ti-x"></i></button>
+      </div>
+      ${body}
+    </div>`;
+  ov.style.display='flex';
+}
+function closeGradeDetail(){
+  const ov=document.getElementById('gradeDetailOverlay');
+  if(ov) ov.style.display='none';
+}

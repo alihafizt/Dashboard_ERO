@@ -1533,3 +1533,8 @@
 /* ---- Label kontrol Analisis ---- */
 .cmp-step { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); font-weight: 700; margin: 12px 0 6px; }
 .cmp-hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 12px; line-height: 1.5; }
+
+/* ---- Popup grade & highlight rata-rata ---- */
+.gdm-box { max-width: 560px; width: calc(100% - 32px); }
+.gm-highlight { margin: 0 0 14px; border: 1.5px solid var(--brand); }
+.gm-highlight .gmd-title i { color: var(--brand); }
