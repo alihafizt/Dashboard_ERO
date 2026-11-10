@@ -1,8 +1,3 @@
-      const pv=(off)=>parseFloat(r[totalColIdx+off])||0;
-      const mk=(map)=>Object.fromEntries(Object.entries(map).map(([k,o])=>[k,pv(o)]));
-      const tgtObj=mk(OFF.t); if(OFF.tTot!==null) tgtObj.total=pv(OFF.tTot);
-      const achObj=mk(OFF.a); if(OFF.aTot!==null) achObj.total=pv(OFF.aTot);
-      const estObj=mk(OFF.e); if(OFF.eTot!==null) estObj.total=pv(OFF.eTot);
 // =========================================
 // LOGIKA DARK MODE / LIGHT MODE
 // =========================================
@@ -226,6 +221,11 @@ function handleFile(file){
       const total=parseFloat(r[totalColIdx]); if(isNaN(total))continue;
       const nm=String(r[0]).trim();
       const old=oldByName[nm];
+      const pv=(off)=>parseFloat(r[totalColIdx+off])||0;
+      const mk=(map)=>Object.fromEntries(Object.entries(map).map(([k,o])=>[k,pv(o)]));
+      const tgtObj=mk(OFF.t); if(OFF.tTot!==null) tgtObj.total=pv(OFF.tTot);
+      const achObj=mk(OFF.a); if(OFF.aTot!==null) achObj.total=pv(OFF.aTot);
+      const estObj=mk(OFF.e); if(OFF.eTot!==null) estObj.total=pv(OFF.eTot);
       newRows.push({
         name:nm,
         target:tgtObj, ach:achObj, est:estObj,
