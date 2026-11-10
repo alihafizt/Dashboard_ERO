@@ -380,6 +380,7 @@ function render(){
   renderStoreProductivity();
   renderSuratNote();
   renderGrandTotalStrip();
+  placeInjectedAfterTable();
   const allWithTotals=rows.map((r,i)=>({...r,total:calcTotal(r),idx:i}));
   const activeRows=allWithTotals.filter(isActive);
   const sorted=activeRows.slice().sort((a,b)=>b.total-a.total);
@@ -2194,6 +2195,10 @@ function gmHideAch(){
 }
 
 // ---- Filter per kategori poin (Device, ACC, Operator, Boltech, AR ACC, AR Boltech) ----
+function catVals(r,f){
+  if(f==='total') return {t:Number(r.target?.total)||0, a:Number(r.ach?.total)||0, est:Number(r.est?.total)||0};
+  return {t:Number(r.target?.[f])||0, a:Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0, est:Number(r.est?.[f])||0};
+}
 function catAchPct(r,f){
   const t=Number(r.target?.[f])||0;
   if(t<=0) return null;
@@ -2252,9 +2257,9 @@ function renderAttentionPanel(){
   const f=attnCat;
   const active=rows.filter(r=>r && r.name && r.active!==false);
   const withTarget=active.map(r=>{
-    const t=Number(r.target?.[f])||0;
-    const a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
-    return {r, t, a, pct: t>0 ? a/t*100 : null, gap: t-a};
+    const cv=catVals(r,f);
+    const t=cv.t, a=cv.a;
+    return {r, t, a, est:cv.est, pct: t>0 ? a/t*100 : null, gap: t-a};
   });
   const measurable=withTarget.filter(x=>x.pct!==null);
   const noTarget=withTarget.length-measurable.length;
@@ -2263,7 +2268,7 @@ function renderAttentionPanel(){
   const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2});
   const cls=(p)=>p>=100?'ontrack':p>=80?'warn':'behind';
 
-  const chips=fields.map(k=>`<button type="button" class="attn-chip ${k===f?'on':''}" onclick="setAttnCat('${k}')">${escapeHtml(GMD_LABELS[k]||k)}</button>`).join('');
+  const chips=[...fields,'total'].map(k=>`<button type="button" class="attn-chip ${k===f?'on':''}" onclick="setAttnCat('${k}')">${escapeHtml(k==='total'?'Total':(GMD_LABELS[k]||k))}</button>`).join('');
   const body=flagged.length ? flagged.map((x,i)=>`
       <tr>
         <td>${i+1}</td>
@@ -2272,8 +2277,9 @@ function renderAttentionPanel(){
         <td>${fmt(x.a)}</td>
         <td><b class="tp-${cls(x.pct)}">${x.pct.toFixed(1)}%</b></td>
         <td class="attn-gap">${x.gap>0?fmt(x.gap):'–'}</td>
+        <td>${x.est>0?(x.est*100).toFixed(1)+'%':'–'}</td>
       </tr>`).join('')
-    : `<tr><td colspan="6" class="gm-empty-box">Tidak ada ERO di bawah ${attnLimit}% untuk ${escapeHtml(GMD_LABELS[f]||f)}.</td></tr>`;
+    : `<tr><td colspan="7" class="gm-empty-box">Tidak ada ERO di bawah ${attnLimit}% untuk ${escapeHtml(GMD_LABELS[f]||f)}.</td></tr>`;
 
   el.innerHTML=`
     <div class="attn-head">
@@ -2299,7 +2305,7 @@ function renderAttentionPanel(){
     </div>
     <div class="table-scroll gm-scroll gm-scroll-ero attn-scroll">
       <table class="gm-table attn-table">
-        <thead><tr><th>#</th><th>ERO</th><th>Target</th><th>Achievement</th><th>%</th><th>Selisih ke target</th></tr></thead>
+        <thead><tr><th>#</th><th>ERO</th><th>Target</th><th>Achievement</th><th>%</th><th>Selisih ke target</th><th>Est %</th></tr></thead>
         <tbody>${body}</tbody>
       </table>
     </div>`;
@@ -3062,7 +3068,7 @@ function openGradeDetail(name, k){
       <tbody>${fields.map(f=>{
         const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
         return gmAchRow(GMD_LABELS[f]||f, t, a, t>0 ? a/t : null, false);
-      }).join('')}</tbody>
+      }).join('')}${totalRowsHtml(r)}</tbody>
     </table>`;
   }
   ov.innerHTML=`
@@ -3122,4 +3128,30 @@ function renderGrandTotalStrip(){
     <div class="gt-item"><span>Achievement %</span><b class="${cls(g.pct)?'tp-'+cls(g.pct):''}">${pctTxt(g.pct)}</b></div>
     <div class="gt-item"><span>Est % (proyeksi)</span><b class="${cls(g.est)?'tp-'+cls(g.est):''}">${pctTxt(g.est)}</b></div>
     <div class="gt-note">${g.nAch} dari ${g.n} ERO punya data total achievement</div>`;
+}
+
+// ---- Baris Total (target, achievement, est %) untuk popup ----
+function totalRowsHtml(r){
+  const tt=Number(r.target?.total), at=Number(r.ach?.total), et=Number(r.est?.total);
+  if(!(tt>0) && !(at>0)) return '';
+  const ratio = tt>0 ? at/tt : null;
+  const row = gmAchRow('Total', tt||0, at||0, ratio, false);
+  const estTxt = (et>0) ? `${(et*100).toFixed(1)}%` : '–';
+  return row + `<tr><td>Est % total</td><td colspan="3"><b>${estTxt}</b></td></tr>`;
+}
+
+// ---- Daftar ERO (tabel) tampil tepat setelah filter; panel tambahan diletakkan di bawahnya ----
+function placeInjectedAfterTable(){
+  const tbl=document.getElementById('dataTable');
+  if(!tbl) return;
+  const host=tbl.closest('.table-scroll') || tbl.parentElement;
+  if(!host) return;
+  let last=host;
+  ['grandTotalStrip','perhatianWrap','suratNote'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el && el!==last){
+      last.insertAdjacentElement('afterend', el);
+      last=el;
+    }
+  });
 }
