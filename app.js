@@ -1,3 +1,8 @@
+      const pv=(off)=>parseFloat(r[totalColIdx+off])||0;
+      const mk=(map)=>Object.fromEntries(Object.entries(map).map(([k,o])=>[k,pv(o)]));
+      const tgtObj=mk(OFF.t); if(OFF.tTot!==null) tgtObj.total=pv(OFF.tTot);
+      const achObj=mk(OFF.a); if(OFF.aTot!==null) achObj.total=pv(OFF.aTot);
+      const estObj=mk(OFF.e); if(OFF.eTot!==null) estObj.total=pv(OFF.eTot);
 // =========================================
 // LOGIKA DARK MODE / LIGHT MODE
 // =========================================
@@ -206,6 +211,14 @@ function handleFile(file){
     let headerRowIdx=-1,totalColIdx=-1;
     for(let i=0;i<grid.length;i++){const idx=grid[i].findIndex(c=>typeof c==='string'&&c.trim().toLowerCase()==='total point');if(idx>-1){headerRowIdx=i;totalColIdx=idx;break;}}
     if(headerRowIdx===-1)throw new Error('Kolom "Total Point" tidak ditemukan.');
+    const newLayout=grid[headerRowIdx][totalColIdx-30]==='Device';
+    const OFF=newLayout
+      ? {t:{device:-30,acc:-29,operator:-28,boltech:-27,arAcc:-26,arBoltech:-25},tTot:-24,
+         a:{deviceQty:-23,deviceVal:-22,accQty:-21,accVal:-20,operator:-19,boltechQty:-18,boltechVal:-17,arAcc:-16,arBoltech:-15},aTot:-14,
+         e:{device:-13,acc:-12,operator:-11,boltech:-10,arAcc:-9,arBoltech:-8},eTot:-7}
+      : {t:{device:-27,acc:-26,operator:-25,boltech:-24,arAcc:-23,arBoltech:-22},tTot:null,
+         a:{deviceQty:-21,deviceVal:-20,accQty:-19,accVal:-18,operator:-17,boltechQty:-16,boltechVal:-15,arAcc:-14,arBoltech:-13},aTot:null,
+         e:{device:-12,acc:-11,operator:-10,boltech:-9,arAcc:-8,arBoltech:-7},eTot:null};
     const newRows=[];
     const oldByName={}; rows.forEach(r=>oldByName[r.name]=r);
     for(let i=headerRowIdx+1;i<grid.length;i++){
@@ -215,9 +228,7 @@ function handleFile(file){
       const old=oldByName[nm];
       newRows.push({
         name:nm,
-        target:{device:parseFloat(r[totalColIdx-27])||0,acc:parseFloat(r[totalColIdx-26])||0,operator:parseFloat(r[totalColIdx-25])||0,boltech:parseFloat(r[totalColIdx-24])||0,arAcc:parseFloat(r[totalColIdx-23])||0,arBoltech:parseFloat(r[totalColIdx-22])||0},
-        ach:{deviceQty:parseFloat(r[totalColIdx-21])||0,deviceVal:parseFloat(r[totalColIdx-20])||0,accQty:parseFloat(r[totalColIdx-19])||0,accVal:parseFloat(r[totalColIdx-18])||0,operator:parseFloat(r[totalColIdx-17])||0,boltechQty:parseFloat(r[totalColIdx-16])||0,boltechVal:parseFloat(r[totalColIdx-15])||0,arAcc:parseFloat(r[totalColIdx-14])||0,arBoltech:parseFloat(r[totalColIdx-13])||0},
-        est:{device:parseFloat(r[totalColIdx-12])||0,acc:parseFloat(r[totalColIdx-11])||0,operator:parseFloat(r[totalColIdx-10])||0,boltech:parseFloat(r[totalColIdx-9])||0,arAcc:parseFloat(r[totalColIdx-8])||0,arBoltech:parseFloat(r[totalColIdx-7])||0},
+        target:tgtObj, ach:achObj, est:estObj,
         device:parseFloat(r[totalColIdx-6])||0,acc:parseFloat(r[totalColIdx-5])||0,operator:parseFloat(r[totalColIdx-4])||0,boltech:parseFloat(r[totalColIdx-3])||0,arAcc:parseFloat(r[totalColIdx-2])||0,arBoltech:parseFloat(r[totalColIdx-1])||0,
         store:r[totalColIdx+2]?String(r[totalColIdx+2]).trim():'',
         active:old ? old.active!==false : true,
@@ -368,6 +379,7 @@ function render(){
   renderTrendWarnPanel();
   renderStoreProductivity();
   renderSuratNote();
+  renderGrandTotalStrip();
   const allWithTotals=rows.map((r,i)=>({...r,total:calcTotal(r),idx:i}));
   const activeRows=allWithTotals.filter(isActive);
   const sorted=activeRows.slice().sort((a,b)=>b.total-a.total);
@@ -3012,6 +3024,11 @@ function renderPersonHighlight(name){
     const avgA=as.length ? as.reduce((a,b)=>a+b,0)/as.length : 0;
     return gmAchRow(GMD_LABELS[f]||f, avgT, avgA, avgT>0 ? avgA/avgT : null, false);
   }).join('');
+  const totT=found.map(x=>Number(x.r.target?.total)||0).filter(v=>v>0);
+  const totA=found.map(x=>Number(x.r.ach?.total)||0).filter(v=>v>0);
+  const tAvgT=totT.length ? totT.reduce((a,b)=>a+b,0)/totT.length : 0;
+  const tAvgA=totA.length ? totA.reduce((a,b)=>a+b,0)/totA.length : 0;
+  const totalRow=(tAvgT>0 || tAvgA>0) ? gmAchRow('Total', tAvgT, tAvgA, tAvgT>0 ? tAvgA/tAvgT : null, false) : '';
   const span=`${gmMonthLabel(found[0].k)} – ${gmMonthLabel(found[found.length-1].k)}`;
   host.innerHTML=`
     <div class="gmd-box gm-highlight">
@@ -3019,7 +3036,7 @@ function renderPersonHighlight(name){
       <div class="gmd-sub">${escapeHtml(span)} · ${found.length} bulan terdata</div>
       <table class="gm-table gmd-ach-table">
         <thead><tr><th>Kategori</th><th>Rata-rata target</th><th>Rata-rata achievement</th><th>%</th></tr></thead>
-        <tbody>${rowsHtml}</tbody>
+        <tbody>${rowsHtml}${totalRow}</tbody>
       </table>
     </div>`;
 }
@@ -3064,4 +3081,45 @@ function openGradeDetail(name, k){
 function closeGradeDetail(){
   const ov=document.getElementById('gradeDetailOverlay');
   if(ov) ov.style.display='none';
+}
+
+// ---- Grand total achievement ERO (kolom Total dari file Excel) ----
+function grandTotalOf(list){
+  let tgt=0, ach=0, achN=0, estNum=0, estDen=0;
+  list.forEach(r=>{
+    const t=r.target||{}, a=r.ach||{}, e=r.est||{};
+    const tT = (t.total!==undefined) ? Number(t.total)||0 : fields.reduce((s,f)=>s+(Number(t[f])||0),0);
+    tgt+=tT;
+    if(a.total!==undefined){ ach+=Number(a.total)||0; achN++; }
+    if(e.total!==undefined && tT>0){ estNum+=(Number(e.total)||0)*tT; estDen+=tT; }
+  });
+  return {
+    tgt, ach: achN ? ach : null,
+    pct: (achN && tgt>0) ? ach/tgt*100 : null,
+    est: estDen>0 ? estNum/estDen*100 : null,
+    n: list.length, nAch: achN
+  };
+}
+function renderGrandTotalStrip(){
+  const sec=document.querySelector('[data-view-section="eros"] .panel');
+  if(!sec || !rows || !rows.length) return;
+  let el=document.getElementById('grandTotalStrip');
+  if(!el){
+    el=document.createElement('div');
+    el.id='grandTotalStrip';
+    el.className='gt-strip';
+    const bar=sec.querySelector('.filter-bar');
+    if(bar) bar.insertAdjacentElement('afterend', el); else sec.prepend(el);
+  }
+  const list=rows.filter(r=>r && r.name && r.active!==false && (!filterStore || r.store===filterStore));
+  const g=grandTotalOf(list);
+  const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:0});
+  const pctTxt=(p)=>p===null?'–':p.toFixed(1)+'%';
+  const cls=(p)=>p===null?'':(p>=100?'ontrack':p>=80?'warn':'behind');
+  el.innerHTML=`
+    <div class="gt-item"><span>Total target</span><b>${fmt(g.tgt)}</b></div>
+    <div class="gt-item"><span>Total achievement</span><b>${g.ach===null?'–':fmt(g.ach)}</b></div>
+    <div class="gt-item"><span>Achievement %</span><b class="${cls(g.pct)?'tp-'+cls(g.pct):''}">${pctTxt(g.pct)}</b></div>
+    <div class="gt-item"><span>Est % (proyeksi)</span><b class="${cls(g.est)?'tp-'+cls(g.est):''}">${pctTxt(g.est)}</b></div>
+    <div class="gt-note">${g.nAch} dari ${g.n} ERO punya data total achievement</div>`;
 }
