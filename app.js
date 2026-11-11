@@ -3089,7 +3089,7 @@ function openGradeDetail(name, k){
           <div class="gmd-title"><i class="ti ti-user"></i> ${escapeHtml(name)}</div>
           <div class="gmd-sub">${sub}</div>
         </div>
-        <button type="button" class="gmd-close" onclick="closeGradeDetail()" aria-label="Tutup"><i class="ti ti-x"></i></button>
+        <button type="button" class="gmd-close" onclick="closeGradeDetail()" aria-label="Tutup">${CLOSE_ICON}</button>
       </div>
       ${body}
     </div>`;
@@ -3166,3 +3166,102 @@ function placeInjectedAfterTable(){
     }
   });
 }
+
+// ---- Tombol tutup (X) di semua popup: pakai SVG agar tidak bergantung pada font ikon ----
+const CLOSE_ICON='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+function fixCloseButtons(){
+  document.querySelectorAll('.modal-close, .gmd-close').forEach(b=>{
+    b.innerHTML=CLOSE_ICON;
+    b.setAttribute('aria-label','Tutup');
+  });
+}
+fixCloseButtons();
+document.addEventListener('keydown', e=>{
+  if(e.key!=='Escape') return;
+  if(typeof closePersonModal==='function') closePersonModal();
+  if(typeof closeStoreModal==='function') closeStoreModal();
+  if(typeof closeGradeDetail==='function') closeGradeDetail();
+});
+
+// ---- Screenshot harian: Dashboard + ranking ERO per 10 baris (Alt+S atau tombol di pojok kanan bawah) ----
+const wait=(ms)=>new Promise(r=>setTimeout(r,ms));
+function shotGoView(v){
+  document.querySelector(`.nav-item[data-view="${v}"]`)?.click();
+}
+function shotCurrentView(){
+  const vis=[...document.querySelectorAll('.view-section')].find(el=>getComputedStyle(el).display!=='none');
+  return vis ? vis.dataset.viewSection : null;
+}
+function shotCapture(el){
+  return html2canvas(el,{backgroundColor:null, scale:2, useCORS:true, logging:false})
+    .then(c=>new Promise(res=>c.toBlob(res,'image/png')));
+}
+function shotDownload(blob,name){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },1000);
+}
+async function captureDailyPack(){
+  if(typeof html2canvas!=='function'){ alert('Library screenshot belum termuat. Muat ulang halaman, lalu coba lagi.'); return; }
+  const btn=document.getElementById('shotBtn');
+  if(btn) btn.disabled=true;
+  const prev=shotCurrentView();
+  const tag=todayISO();
+  try{
+    shotGoView('dashboard'); await wait(600);
+    const dash=document.querySelector('[data-view-section="dashboard"]');
+    if(dash){ shotDownload(await shotCapture(dash), `Dashboard_${tag}.png`); await wait(400); }
+
+    shotGoView('eros'); await wait(600);
+    const tbl=document.getElementById('dataTable');
+    if(tbl){
+      const thead=tbl.querySelector('thead');
+      const trs=[...tbl.querySelectorAll('tbody tr')];
+      for(let i=0;i<trs.length;i+=10){
+        const part=trs.slice(i,i+10);
+        const wrap=document.createElement('div');
+        wrap.className=tbl.parentElement?.className || '';
+        wrap.style.cssText=`position:fixed;left:-20000px;top:0;width:${tbl.offsetWidth}px;padding:12px;background:var(--bg-body, #0b1220);`;
+        const t=document.createElement('table');
+        t.className=tbl.className;
+        if(thead) t.appendChild(thead.cloneNode(true));
+        const tb=document.createElement('tbody');
+        part.forEach(tr=>tb.appendChild(tr.cloneNode(true)));
+        t.appendChild(tb);
+        wrap.appendChild(t);
+        document.body.appendChild(wrap);
+        const blob=await shotCapture(wrap);
+        document.body.removeChild(wrap);
+        const from=String(i+1).padStart(2,'0'), to=String(Math.min(i+10,trs.length)).padStart(2,'0');
+        shotDownload(blob, `Rank_${from}-${to}_${tag}.png`);
+        await wait(400);
+      }
+    }
+  } catch(e){
+    console.error(e);
+    alert('Screenshot gagal. Cek Console (F12) untuk detailnya.');
+  } finally {
+    if(prev) shotGoView(prev);
+    if(btn) btn.disabled=false;
+  }
+}
+function mountShotButton(){
+  if(document.getElementById('shotBtn')) return;
+  const b=document.createElement('button');
+  b.id='shotBtn';
+  b.type='button';
+  b.title='Screenshot dashboard dan ranking ERO (Alt+S)';
+  b.textContent='📷 Screenshot harian';
+  b.onclick=captureDailyPack;
+  document.body.appendChild(b);
+}
+document.addEventListener('keydown', e=>{
+  if(e.altKey && (e.key==='s' || e.key==='S')){
+    e.preventDefault();
+    captureDailyPack();
+  }
+});
+mountShotButton();
