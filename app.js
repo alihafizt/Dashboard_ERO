@@ -3193,8 +3193,13 @@ function shotCurrentView(){
   return vis ? vis.dataset.viewSection : null;
 }
 function shotCapture(el){
-  return html2canvas(el,{backgroundColor:null, scale:2, useCORS:true, logging:false})
-    .then(c=>new Promise(res=>c.toBlob(res,'image/png')));
+  window.scrollTo(0,0);
+  return html2canvas(el,{
+    backgroundColor:'#ffffff', scale:2.5, useCORS:true, logging:false,
+    scrollX:0, scrollY:0,
+    windowWidth: el.scrollWidth,
+    windowHeight: el.scrollHeight
+  }).then(c=>new Promise(res=>c.toBlob(res,'image/png')));
 }
 function shotDownload(blob,name){
   const a=document.createElement('a');
@@ -3210,12 +3215,15 @@ async function captureDailyPack(){
   if(btn) btn.disabled=true;
   const prev=shotCurrentView();
   const tag=todayISO();
+  const root=document.documentElement;
+  const prevTheme=root.getAttribute('data-theme');
+  root.setAttribute('data-theme','light');
   try{
-    shotGoView('dashboard'); await wait(600);
+    shotGoView('dashboard'); await wait(900);
     const dash=document.querySelector('[data-view-section="dashboard"]');
     if(dash){ shotDownload(await shotCapture(dash), `Dashboard_${tag}.png`); await wait(400); }
 
-    shotGoView('eros'); await wait(600);
+    shotGoView('eros'); await wait(900);
     const tbl=document.getElementById('dataTable');
     if(tbl){
       const thead=tbl.querySelector('thead');
@@ -3244,6 +3252,7 @@ async function captureDailyPack(){
     console.error(e);
     alert('Screenshot gagal. Cek Console (F12) untuk detailnya.');
   } finally {
+    if(prevTheme===null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prevTheme);
     if(prev) shotGoView(prev);
     if(btn) btn.disabled=false;
   }
@@ -3258,10 +3267,19 @@ function mountShotButton(){
   b.onclick=captureDailyPack;
   document.body.appendChild(b);
 }
+const SHOT_VIEWS=['dashboard','eros'];
+function updateShotButtonVisibility(){
+  const b=document.getElementById('shotBtn');
+  if(!b) return;
+  const v=shotCurrentView();
+  b.style.display = SHOT_VIEWS.includes(v) ? '' : 'none';
+}
 document.addEventListener('keydown', e=>{
-  if(e.altKey && (e.key==='s' || e.key==='S')){
+  if(e.altKey && (e.key==='s' || e.key==='S') && SHOT_VIEWS.includes(shotCurrentView())){
     e.preventDefault();
     captureDailyPack();
   }
 });
 mountShotButton();
+updateShotButtonVisibility();
+setInterval(updateShotButtonVisibility, 400);
