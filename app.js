@@ -738,7 +738,18 @@ function buildTargetProgressHtml(r){
       <div class="target-progress-track"><div class="target-progress-fill ${cls}" style="width:${clamped}%"></div></div>
     </div>`;
   }).join('');
-  return `<div class="target-progress-wrap"><div class="target-progress-title"><i class="ti ti-target-arrow"></i>Target vs Pencapaian (% dari target)</div>${rowsHtml}</div>`;
+  const totRatio = parseFloat(est.total);
+  let totRow = '';
+  if(!isNaN(totRatio) && isFinite(totRatio)){
+    const tp = totRatio*100;
+    const tcls = tp>=100 ? 'ontrack' : tp>=80 ? 'warn' : 'behind';
+    const tclamped = Math.max(0, Math.min(100, tp));
+    totRow = `<div class="target-progress-row">
+      <div class="target-progress-head"><span><b>Total</b></span><b class="tp-${tcls}">${tp.toFixed(0)}%</b></div>
+      <div class="target-progress-track"><div class="target-progress-fill ${tcls}" style="width:${tclamped}%"></div></div>
+    </div>`;
+  }
+  return `<div class="target-progress-wrap"><div class="target-progress-title"><i class="ti ti-target-arrow"></i>Target vs Pencapaian (% dari target)</div>${rowsHtml}${totRow}</div>`;
 }
 
 /* ============ Target & pencapaian bulanan level Store ============
@@ -2163,7 +2174,7 @@ function gmAchHtml(){
     rowsHtml=fields.map(f=>{
       const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
       return gmAchRow(GMD_LABELS[f]||f, t, a, t>0?a/t:null, f===focusF);
-    }).join('');
+    }).join('') + totalRowsHtml(r);
     sub=`Poin ${gmTotal(r).toFixed(2)} · ${calcGrade(gmTotal(r))}`;
   } else {
     const agg=computeStoreTargetAgg(gmDetail.name, src);
