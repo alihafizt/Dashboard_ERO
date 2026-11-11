@@ -3192,14 +3192,23 @@ function shotCurrentView(){
   const vis=[...document.querySelectorAll('.view-section')].find(el=>getComputedStyle(el).display!=='none');
   return vis ? vis.dataset.viewSection : null;
 }
-function shotCapture(el){
+function shotBgColor(){
+  const c=getComputedStyle(document.body).backgroundColor;
+  return c && c!=='rgba(0, 0, 0, 0)' ? c : null;
+}
+function shotCapture(el, extra={}){
   window.scrollTo(0,0);
-  return html2canvas(el,{
-    backgroundColor:'#ffffff', scale:2.5, useCORS:true, logging:false,
-    scrollX:0, scrollY:0,
-    windowWidth: el.scrollWidth,
-    windowHeight: el.scrollHeight
-  }).then(c=>new Promise(res=>c.toBlob(res,'image/png')));
+  return html2canvas(el, Object.assign({
+    backgroundColor: shotBgColor(), scale:2.5, useCORS:true, logging:false,
+    scrollX:0, scrollY:0
+  }, extra)).then(c=>new Promise(res=>c.toBlob(res,'image/png')));
+}
+// Dashboard: potong di bagian awal Papan Peringkat (seperti contoh), agar tidak terlalu panjang
+function shotDashboardHeight(dash){
+  const heads=[...dash.querySelectorAll('*')].filter(e=>e.childElementCount===0 && /papan peringkat/i.test(e.textContent||''));
+  if(!heads.length) return dash.scrollHeight;
+  const top=heads[0].getBoundingClientRect().top - dash.getBoundingClientRect().top;
+  return Math.min(dash.scrollHeight, Math.round(top + 760));
 }
 function shotDownload(blob,name){
   const a=document.createElement('a');
@@ -3215,13 +3224,10 @@ async function captureDailyPack(){
   if(btn) btn.disabled=true;
   const prev=shotCurrentView();
   const tag=todayISO();
-  const root=document.documentElement;
-  const prevTheme=root.getAttribute('data-theme');
-  root.setAttribute('data-theme','light');
   try{
     shotGoView('dashboard'); await wait(900);
     const dash=document.querySelector('[data-view-section="dashboard"]');
-    if(dash){ shotDownload(await shotCapture(dash), `Dashboard_${tag}.png`); await wait(400); }
+    if(dash){ shotDownload(await shotCapture(dash, {height: shotDashboardHeight(dash)}), `Dashboard_${tag}.png`); await wait(400); }
 
     shotGoView('eros'); await wait(900);
     const tbl=document.getElementById('dataTable');
@@ -3252,7 +3258,6 @@ async function captureDailyPack(){
     console.error(e);
     alert('Screenshot gagal. Cek Console (F12) untuk detailnya.');
   } finally {
-    if(prevTheme===null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prevTheme);
     if(prev) shotGoView(prev);
     if(btn) btn.disabled=false;
   }
