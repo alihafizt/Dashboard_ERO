@@ -1551,3 +1551,16 @@
 #shotBtn:hover { border-color: var(--brand); color: var(--brand); }
 #shotBtn:disabled { opacity: .6; cursor: wait; }
 @media (max-width: 900px) { #shotBtn { bottom: 96px; right: 12px; } }
+
+/* ---- Popup ERO lebih lebar di desktop agar kolom kategori terlihat tanpa geser ---- */
+@media (min-width: 901px) {
+  #personModal .modal-box {
+    max-width: min(1100px, 92vw);
+    width: min(1100px, 92vw);
+  }
+  #personModal .modal-box .gm-table,
+  #personModal .modal-box .gmd-scroll,
+  #personModal .modal-box .table-scroll {
+    max-width: 100%;
+  }
+}
