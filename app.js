@@ -2171,10 +2171,13 @@ function gmAchHtml(){
   if(gmDetail.type==='ero'){
     const r=src.find(x=>x.name===gmDetail.name && x.active!==false);
     if(!r) return `<div class="gmd-ach" id="gmdAch"><div class="gmd-ach-title">${escapeHtml(label)}</div><div class="gm-empty">Tidak ada data ERO untuk bulan ini.</div></div>`;
+    const curNow=isCurrentKey(k);
     rowsHtml=fields.map(f=>{
       const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
-      return gmAchRow(GMD_LABELS[f]||f, t, a, t>0?a/t:null, f===focusF);
-    }).join('') + totalRowsHtml(r);
+      return curNow
+        ? gmAchRowEst(GMD_LABELS[f]||f, t, a, t>0?a/t:null, f===focusF, estPctOf(r,f))
+        : gmAchRow(GMD_LABELS[f]||f, t, a, t>0?a/t:null, f===focusF);
+    }).join('') + (curNow ? totalRowsEstHtml(r) : totalRowsHtml(r));
     sub=`Poin ${gmTotal(r).toFixed(2)} · ${calcGrade(gmTotal(r))}`;
   } else {
     const agg=computeStoreTargetAgg(gmDetail.name, src);
@@ -2187,7 +2190,7 @@ function gmAchHtml(){
       <button type="button" class="gmd-close" onclick="gmHideAch()" aria-label="Tutup"><i class="ti ti-x"></i></button>
     </div>
     <table class="gm-table gmd-ach-table">
-      <thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th></tr></thead>
+      ${theadHtml(isCurrentKey(k))}
       <tbody>${rowsHtml}</tbody>
     </table>
   </div>`;
@@ -3075,11 +3078,13 @@ function openGradeDetail(name, k){
     const total=gmTotal(r), g=calcGrade(total);
     sub=`${escapeHtml(gmMonthLabel(k))} · grade ${escapeHtml(g)} · poin ${total.toFixed(2)}`;
     body=`<table class="gm-table gmd-ach-table">
-      <thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th></tr></thead>
+      ${theadHtml(isCurrentKey(k))}
       <tbody>${fields.map(f=>{
         const t=Number(r.target?.[f])||0, a=Number(r.ach?.[STORE_TARGET_ACH_MAP[f]])||0;
-        return gmAchRow(GMD_LABELS[f]||f, t, a, t>0 ? a/t : null, false);
-      }).join('')}${totalRowsHtml(r)}</tbody>
+        return isCurrentKey(k)
+          ? gmAchRowEst(GMD_LABELS[f]||f, t, a, t>0 ? a/t : null, false, estPctOf(r,f))
+          : gmAchRow(GMD_LABELS[f]||f, t, a, t>0 ? a/t : null, false);
+      }).join('')}${isCurrentKey(k) ? totalRowsEstHtml(r) : totalRowsHtml(r)}</tbody>
     </table>`;
   }
   ov.innerHTML=`
@@ -3288,3 +3293,36 @@ document.addEventListener('keydown', e=>{
 mountShotButton();
 updateShotButtonVisibility();
 setInterval(updateShotButtonVisibility, 400);
+
+// ---- Indikator Est untuk bulan berjalan: Est val (proyeksi nilai) dan Est % ----
+function isCurrentKey(k){ return k===getCurrentMonthKey(); }
+function theadHtml(withEst){
+  return withEst
+    ? '<thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th><th>Est val</th><th>Est %</th></tr></thead>'
+    : '<thead><tr><th>Kategori</th><th>Target</th><th>Achievement</th><th>%</th></tr></thead>';
+}
+function estPctOf(r,f){
+  const v=Number(r.est?.[f]);
+  return (isFinite(v) && v>0) ? v : null;   // Est % dari file (kolom Est %)
+}
+function gmAchRowEst(label,t,a,ratio,focus,estPct){
+  const has=ratio!==null && ratio!==undefined && isFinite(ratio);
+  const v=has?ratio*100:null;
+  const cls=v===null?'':(v>=100?'ontrack':v>=80?'warn':'behind');
+  const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2});
+  const hasEst = estPct!==null && estPct!==undefined && isFinite(estPct);
+  const estVal = hasEst ? t*estPct : null;
+  const estCls = hasEst ? (estPct*100>=100?'ontrack':estPct*100>=80?'warn':'behind') : '';
+  return `<tr class="${focus?'gmd-focus':''}"><td>${label}</td><td>${fmt(t)}</td><td>${fmt(a)}</td><td>${has?`<b class="tp-${cls}">${v.toFixed(1)}%</b>`:'<span class="gm-empty">–</span>'}</td><td>${hasEst?fmt(estVal):'–'}</td><td>${hasEst?`<b class="tp-${estCls}">${(estPct*100).toFixed(1)}%</b>`:'<span class="gm-empty">–</span>'}</td></tr>`;
+}
+function totalRowsEstHtml(r){
+  const tt=Number(r.target?.total), at=Number(r.ach?.total), et=Number(r.est?.total);
+  if(!(tt>0) && !(at>0)) return '';
+  const ratio = tt>0 ? at/tt : null;
+  const hasEst = isFinite(et) && et>0;
+  const estVal = hasEst ? tt*et : null;
+  const estCls = hasEst ? (et*100>=100?'ontrack':et*100>=80?'warn':'behind') : '';
+  const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2});
+  const cls = ratio===null ? '' : (ratio*100>=100?'ontrack':ratio*100>=80?'warn':'behind');
+  return `<tr><td><b>Total</b></td><td>${fmt(tt)}</td><td>${fmt(at)}</td><td>${ratio===null?'–':`<b class="tp-${cls}">${(ratio*100).toFixed(1)}%</b>`}</td><td>${hasEst?fmt(estVal):'–'}</td><td>${hasEst?`<b class="tp-${estCls}">${(et*100).toFixed(1)}%</b>`:'–'}</td></tr>`;
+}
