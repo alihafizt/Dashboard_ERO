@@ -3229,12 +3229,19 @@ async function captureDailyPack(){
   if(btn) btn.disabled=true;
   const prev=shotCurrentView();
   const tag=todayISO();
+  const prepStyle=shotPrepStyle();
   try{
-    shotGoView('dashboard'); await wait(900);
+    shotGoView('dashboard'); await wait(1200);
     const dash=document.querySelector('[data-view-section="dashboard"]');
-    if(dash){ shotDownload(await shotCapture(dash, {height: shotDashboardHeight(dash)}), `Dashboard_${tag}.png`); await wait(400); }
+    if(dash){
+      const restoreOp=shotFixOpacity(dash);
+      const blob=await shotCapture(dash, {height: shotDashboardHeight(dash)});
+      restoreOp();
+      shotDownload(blob, `Dashboard_${tag}.png`);
+      await wait(400);
+    }
 
-    shotGoView('eros'); await wait(900);
+    shotGoView('eros'); await wait(1200);
     const tbl=document.getElementById('dataTable');
     if(tbl){
       const thead=tbl.querySelector('thead');
@@ -3263,6 +3270,7 @@ async function captureDailyPack(){
     console.error(e);
     alert('Screenshot gagal. Cek Console (F12) untuk detailnya.');
   } finally {
+    prepStyle.remove();
     if(prev) shotGoView(prev);
     if(btn) btn.disabled=false;
   }
@@ -3325,4 +3333,24 @@ function totalRowsEstHtml(r){
   const fmt=(n)=>Number(n||0).toLocaleString('id-ID',{maximumFractionDigits:2});
   const cls = ratio===null ? '' : (ratio*100>=100?'ontrack':ratio*100>=80?'warn':'behind');
   return `<tr><td><b>Total</b></td><td>${fmt(tt)}</td><td>${fmt(at)}</td><td>${ratio===null?'–':`<b class="tp-${cls}">${(ratio*100).toFixed(1)}%</b>`}</td><td>${hasEst?fmt(estVal):'–'}</td><td>${hasEst?`<b class="tp-${estCls}">${(et*100).toFixed(1)}%</b>`:'–'}</td></tr>`;
+}
+
+// ---- Perbaikan kualitas screenshot: matikan animasi/blur, kembalikan elemen yang sedang memudar ----
+function shotPrepStyle(){
+  const st=document.createElement('style');
+  st.id='shotPrep';
+  st.textContent='*{animation:none!important;transition:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;mask-image:none!important;-webkit-mask-image:none!important;}';
+  document.head.appendChild(st);
+  return st;
+}
+function shotFixOpacity(root){
+  const changed=[];
+  root.querySelectorAll('*').forEach(el=>{
+    const o=parseFloat(getComputedStyle(el).opacity);
+    if(o>0.01 && o<0.99){
+      changed.push([el, el.style.opacity]);
+      el.style.opacity='1';
+    }
+  });
+  return ()=>changed.forEach(([el,v])=>{ el.style.opacity=v; });
 }
