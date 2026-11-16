@@ -1,0 +1,4 @@
+_old_backup_sept/
+*.backup.*
+.DS_Store
+Thumbs.db

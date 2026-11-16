@@ -186,48 +186,56 @@
     <div class="panel">
       <h2><i class="ti ti-chart-arrows-vertical"></i>Analisis Progres</h2>
 
-      <!-- Mode tabs -->
-      <div class="compare-mode-tabs">
-        <button class="cmp-tab active" data-cmp-mode="store-time" onclick="setCmpMode('store-time')"><i class="ti ti-building-store"></i> Store dari Waktu ke Waktu</button>
-        <button class="cmp-tab" data-cmp-mode="ero-time" onclick="setCmpMode('ero-time')"><i class="ti ti-user-check"></i> ERO dari Waktu ke Waktu</button>
-        <button class="cmp-tab" data-cmp-mode="ero-store" onclick="setCmpMode('ero-store')"><i class="ti ti-arrows-left-right"></i> Perbandingan ERO dalam Store</button>
+      <!-- Mode & View Type Configuration Card -->
+      <div class="cmp-config-card">
+        <!-- Mode tabs -->
+        <div class="compare-mode-tabs">
+          <button class="cmp-tab active" data-cmp-mode="store-time" onclick="setCmpMode('store-time')"><i class="ti ti-building-store"></i> Store dari Waktu ke Waktu</button>
+          <button class="cmp-tab" data-cmp-mode="ero-time" onclick="setCmpMode('ero-time')"><i class="ti ti-user-check"></i> ERO dari Waktu ke Waktu</button>
+          <button class="cmp-tab" data-cmp-mode="ero-store" onclick="setCmpMode('ero-store')"><i class="ti ti-arrows-left-right"></i> Perbandingan ERO dalam Store</button>
+        </div>
+
+        <!-- View type: Tren (chart bergerak) vs Bandingkan 2 Periode (point-in-time) -->
+        <div class="compare-mode-tabs" style="margin-top:-4px;">
+          <button class="cmp-tab active" data-cmp-viewtype="trend" onclick="setCmpViewType('trend')"><i class="ti ti-chart-line"></i> Tren</button>
+          <button class="cmp-tab" data-cmp-viewtype="period" onclick="setCmpViewType('period')"><i class="ti ti-calendar-stats"></i> Bandingkan 2 Periode</button>
+        </div>
       </div>
 
-      <!-- View type: Tren (chart bergerak) vs Bandingkan 2 Periode (point-in-time) -->
-      <div class="compare-mode-tabs" style="margin-top:-4px;">
-        <button class="cmp-tab active" data-cmp-viewtype="trend" onclick="setCmpViewType('trend')"><i class="ti ti-chart-line"></i> Tren</button>
-        <button class="cmp-tab" data-cmp-viewtype="period" onclick="setCmpViewType('period')"><i class="ti ti-calendar-stats"></i> Bandingkan 2 Periode</button>
-      </div>
+      <!-- Filters & Range Card -->
+      <div class="cmp-filter-card">
+        <!-- Shared store filter -->
+        <div class="cmp-period-bar cmp-filter-store">
+          <label>Filter Store</label>
+          <select id="cmpStoreFilter" onchange="renderCompareView()"><option value="">Semua Store</option></select>
+        </div>
 
-      <!-- Shared store filter -->
-      <div class="cmp-period-bar">
-        <label>Filter Store</label>
-        <select id="cmpStoreFilter" onchange="renderCompareView()"><option value="">Semua Store</option></select>
-      </div>
+        <!-- TREN controls -->
+        <div class="cmp-period-bar" id="cmpTrendControls">
+          <label>Periode:</label>
+          <button class="cmp-period-btn" data-period="7" onclick="setCmpPeriod(7)">7 Hari</button>
+          <button class="cmp-period-btn active" data-period="30" onclick="setCmpPeriod(30)">30 Hari</button>
+          <button class="cmp-period-btn" data-period="90" onclick="setCmpPeriod(90)">3 Bulan</button>
+          <button class="cmp-period-btn" data-period="0" onclick="setCmpPeriod(0)">Semua</button>
+        </div>
 
-      <!-- TREN controls -->
-      <div class="cmp-period-bar" id="cmpTrendControls">
-        <label>Periode:</label>
-        <button class="cmp-period-btn" data-period="7" onclick="setCmpPeriod(7)">7 Hari</button>
-        <button class="cmp-period-btn active" data-period="30" onclick="setCmpPeriod(30)">30 Hari</button>
-        <button class="cmp-period-btn" data-period="90" onclick="setCmpPeriod(90)">3 Bulan</button>
-        <button class="cmp-period-btn" data-period="0" onclick="setCmpPeriod(0)">Semua</button>
-      </div>
+        <!-- BANDINGKAN 2 PERIODE controls -->
+        <div class="cmp-period-bar" id="cmpPeriodControls" style="display:none;">
+          <label>Preset:</label>
+          <button class="cmp-period-btn active" data-preset="week" onclick="setCmpPreset('week')">Minggu Ini vs Minggu Lalu</button>
+          <button class="cmp-period-btn" data-preset="month" onclick="setCmpPreset('month')">Bulan Ini vs Bulan Lalu</button>
+          <button class="cmp-period-btn" data-preset="custom" onclick="setCmpPreset('custom')">Custom Tanggal (Daily)</button>
+        </div>
 
-      <!-- BANDINGKAN 2 PERIODE controls -->
-      <div class="cmp-period-bar" id="cmpPeriodControls" style="display:none;">
-        <label>Preset:</label>
-        <button class="cmp-period-btn active" data-preset="week" onclick="setCmpPreset('week')">Minggu Ini vs Minggu Lalu</button>
-        <button class="cmp-period-btn" data-preset="month" onclick="setCmpPreset('month')">Bulan Ini vs Bulan Lalu</button>
-        <button class="cmp-period-btn" data-preset="custom" onclick="setCmpPreset('custom')">Custom Tanggal (Daily)</button>
+        <div class="cmp-period-bar" id="cmpCustomDateRow" style="display:none;">
+          <div class="filter-field" style="min-width:140px;"><label>Periode B — Dari</label><input type="date" id="cmpBFrom" onchange="renderCompareView()"></div>
+          <div class="filter-field" style="min-width:140px;"><label>Periode B — Sampai</label><input type="date" id="cmpBTo" onchange="renderCompareView()"></div>
+          <div class="filter-field" style="min-width:140px;"><label>Periode A — Dari</label><input type="date" id="cmpAFrom" onchange="renderCompareView()"></div>
+          <div class="filter-field" style="min-width:140px;"><label>Periode A — Sampai</label><input type="date" id="cmpATo" onchange="renderCompareView()"></div>
+        </div>
+
+        <div class="sub" id="cmpCustomHint" style="display:none; color:var(--text-muted); font-size:12px; margin:4px 0 0; width:100%;">Tip: isi Dari = Sampai dengan tanggal yang sama pada kedua periode untuk perbandingan harian (misal hari ini vs kemarin).</div>
       </div>
-      <div class="cmp-period-bar" id="cmpCustomDateRow" style="display:none;">
-        <div class="filter-field" style="min-width:140px;"><label>Periode B — Dari</label><input type="date" id="cmpBFrom" onchange="renderCompareView()"></div>
-        <div class="filter-field" style="min-width:140px;"><label>Periode B — Sampai</label><input type="date" id="cmpBTo" onchange="renderCompareView()"></div>
-        <div class="filter-field" style="min-width:140px;"><label>Periode A — Dari</label><input type="date" id="cmpAFrom" onchange="renderCompareView()"></div>
-        <div class="filter-field" style="min-width:140px;"><label>Periode A — Sampai</label><input type="date" id="cmpATo" onchange="renderCompareView()"></div>
-      </div>
-      <div class="sub" id="cmpCustomHint" style="display:none; color:var(--text-muted); font-size:12px; margin:-6px 0 16px;">Tip: isi Dari = Sampai dengan tanggal yang sama pada kedua periode untuk perbandingan harian (misal hari ini vs kemarin).</div>
 
       <!-- KPI row -->
       <div id="cmpKpiRow" class="cmp-kpi-row"></div>

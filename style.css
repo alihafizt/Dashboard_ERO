@@ -1564,3 +1564,439 @@
     max-width: 100%;
   }
 }
+
+/* ==========================================================================
+   LAYOUT DENSITY OPTIMIZATION — ruang dipadatkan tanpa ubah warna / visual
+   Blok ini diletakkan paling akhir agar bisa override nilai spacing lama.
+   Hanya mengubah padding, gap, margin, ukuran sidebar & grid. Tidak ada
+   perubahan warna, font, atau logika JS.
+   ========================================================================== */
+
+/* 1. Shell & sidebar: sedikit lebih ramping, konten utama dapat lebih banyak ruang */
+@media (min-width: 901px) {
+  .app-shell { gap: 16px; }
+  .app-sidebar { flex: 0 0 210px; padding: 14px 10px; gap: 4px; }
+  .app-sidebar.collapsed { flex: 0 0 68px; }
+  .sidebar-brand { padding: 6px 10px 14px; font-size: 15px; gap: 10px; margin-bottom: 4px; }
+  .app-sidebar nav { gap: 3px; }
+  .nav-item { padding: 10px 12px; font-size: 13px; gap: 10px; }
+  .sidebar-toggle { padding: 9px 12px; font-size: 12px; }
+}
+
+/* 2. App content: gap antar panel dikurangi */
+.app-content { gap: 16px; }
+.view-section { gap: 16px; }
+
+/* 3. Hero header: lebih kompak vertikal */
+.hero { padding: 16px 22px; }
+.hero-left h1 { font-size: clamp(20px, 3.5vw, 26px); }
+.hero-left h1 i { font-size: 20px; padding: 8px; }
+.hero-left .sub { font-size: 13.5px; margin-top: 5px; }
+
+/* 4. Panel: padding & h2 margin dikurangi */
+.panel { padding: 16px 18px; }
+.panel h2 { margin-bottom: 14px; font-size: 12.5px; }
+
+/* 5. KPI row: lebih rapat */
+.kpi-row { gap: 14px; }
+.kpi-row > .panel { padding: 14px 16px; gap: 10px; }
+
+/* 6. Dashboard grid: gap lebih kecil */
+.dashboard-grid { gap: 14px; }
+
+/* 7. Leaderboard: buka max-height agar tidak terpotong di layar lebar */
+#leaderboard { max-height: 65vh; }
+.leaderboard-row { padding: 9px 8px; margin-bottom: 2px; gap: 10px; }
+
+/* 8. Tabel: padding sel lebih rapat */
+thead th { padding: 11px 13px; }
+th, td { padding: 11px 13px; }
+
+/* 9. Filter bar: sedikit lebih rapat */
+.filter-bar { padding: 12px 16px; margin-bottom: 14px; gap: 12px; }
+
+/* 10. Score grid (Data Toko): kartu lebih kecil = lebih banyak kolom */
+.score-grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.score-card { padding: 14px; }
+
+/* 11. Analisis Progres: kurangi margin antar kontrol */
+.compare-mode-tabs { margin-bottom: 12px; gap: 6px; }
+.cmp-period-bar { margin-bottom: 12px; padding: 10px 14px; gap: 6px; }
+.cmp-kpi-row { gap: 12px; margin-bottom: 14px; }
+.cmp-kpi { padding: 12px 14px; }
+.cmp-chart-wrap { padding: 12px; margin-bottom: 12px; }
+.cmp-section-title { margin: 14px 0 8px; }
+
+/* 12. Monthly/Arsip panel */
+.compare-kpis { gap: 10px; margin-bottom: 14px; }
+.compare-kpi { padding: 12px; }
+
+/* 13. History / riwayat progres */
+.history-summary { padding: 12px 14px; gap: 14px; margin-bottom: 14px; }
+.snap-item { padding: 11px 6px; }
+.snap-body { padding: 12px; margin-top: 10px; }
+
+/* 14. Insight & watch: gap lebih kecil */
+.alert-list { gap: 8px; }
+.alert-item { padding: 12px; gap: 10px; }
+.insight-grid { gap: 10px; }
+.insight-card { padding: 12px; }
+.watch-row { padding: 11px 14px; margin-bottom: 8px; }
+
+/* 15. Podium: sedikit lebih padat */
+.podium { padding: 28px 6px 4px; min-height: 220px; gap: 10px; }
+
+/* 16. Panel head row (Store Performance) */
+.panel-head-row { margin-bottom: 14px; }
+
+/* 17. Store month filter */
+.store-month-filter { margin-bottom: 12px; padding: 8px 10px; }
+
+/* 18. Upload zone */
+.upload-zone { padding: 24px 20px; }
+
+/* 19. Modal: sedikit lebih compact */
+.modal-box { padding: 22px; }
+.modal-head { margin-bottom: 16px; }
+
+/* 20. Month tools */
+.month-tools { gap: 10px; margin: 10px 0 14px; }
+.month-tools .tool-card { padding: 12px; }
+
+/* 21. Body padding di desktop: kurangi area kosong pinggir */
+@media (min-width: 901px) {
+  body { padding: clamp(12px, 2vw, 18px) clamp(10px, 1.5vw, 14px) 48px; }
+}
+
+/* 22. Wide screen (≥1400px): dashboard bisa 3 kolom untuk panel kecil */
+@media (min-width: 1400px) {
+  .app-sidebar { flex: 0 0 220px; }
+}
+
+/* 23. Pastikan collapsed sidebar tetap benar */
+@media (min-width: 901px) {
+  .app-sidebar.collapsed { flex: 0 0 64px; padding: 14px 8px; }
+  .app-sidebar.collapsed .nav-item { padding: 10px 4px; justify-content: center; }
+}
+
+/* 24. Sparkline KPI: sedikit lebih tinggi untuk info lebih jelas */
+.kpi-c1 .kpi-spark-plot,
+.kpi-c1 .kpi-spark svg { height: 44px; }
+
+/* 25. Pilar list: gap antar pilar */
+.pilar-list { gap: 11px; }
+.pilar-foot { margin-top: 12px; padding-top: 10px; }
+
+/* 26. Toolbar: gap lebih rapat */
+.toolbar { gap: 8px; margin-top: 10px; }
+
+/* 27. Grade-per-bulan (ERO modal): kompres lebih lanjut */
+.gm-wrap { margin-top: 16px; }
+.gm-sub { margin: 3px 0 10px; }
+.gm-search-row { margin-bottom: 10px; padding: 7px 10px; }
+.gm-filter-row { margin: 8px 0 10px; padding: 10px 12px; }
+
+/* ==========================================================================
+   ANALISIS PROGRES — Redesign & Polish
+   Menyatukan kontrol bertingkat jadi 2 card rapi:
+   1) Config Card: Yang ingin dilihat (kiri) & Cara menampilkan (kanan)
+   2) Filter Card: Filter Store + Periode / Preset dalam 1 baris terpadu
+   ========================================================================== */
+
+/* --- 1. Tab Atas Analisis: Segmented Control Bar --- */
+.analisis-tabs {
+  display: inline-flex !important;
+  gap: 4px;
+  padding: 4px;
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px solid var(--border-light);
+  border-radius: 14px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+[data-theme="dark"] .analisis-tabs {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.analisis-tabs .perh-tab {
+  border: 1px solid transparent !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: none !important;
+  transform: none !important;
+}
+.analisis-tabs .perh-tab:hover {
+  color: var(--text-main) !important;
+  background: rgba(255, 255, 255, 0.5) !important;
+}
+[data-theme="dark"] .analisis-tabs .perh-tab:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #F8FAFC !important;
+}
+.analisis-tabs .perh-tab.on {
+  background: var(--brand) !important;
+  color: #3B2504 !important;
+  font-weight: 700 !important;
+  box-shadow: 0 2px 8px rgba(245, 180, 0, 0.3) !important;
+}
+[data-theme="dark"] .analisis-tabs .perh-tab.on {
+  background: var(--brand) !important;
+  color: #1E1202 !important;
+  box-shadow: 0 3px 12px rgba(245, 180, 0, 0.35) !important;
+}
+
+/* --- 2. Configuration Card (Yang Ingin Dilihat & Cara Menampilkan) --- */
+.cmp-config-card {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  column-gap: 24px;
+  row-gap: 6px;
+  align-items: start;
+  background: rgba(100, 116, 139, 0.05);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+}
+[data-theme="dark"] .cmp-config-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+.cmp-config-card .cmp-step {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cmp-config-card .cmp-step:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+.cmp-config-card .compare-mode-tabs:nth-of-type(1) {
+  grid-column: 1;
+  grid-row: 2;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+.cmp-config-card .cmp-step:nth-of-type(2) { grid-column: 2; grid-row: 1; }
+.cmp-config-card .compare-mode-tabs:nth-of-type(2) {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 0;
+}
+
+/* Tombol tab dalam config card */
+.cmp-config-card .cmp-tab {
+  padding: 7px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--border-light);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: none;
+}
+.cmp-config-card .cmp-tab:hover {
+  color: var(--text-main);
+  border-color: var(--brand);
+}
+.cmp-config-card .cmp-tab.active {
+  background: var(--brand);
+  color: #3B2504;
+  border-color: var(--brand);
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(245, 180, 0, 0.25);
+}
+[data-theme="dark"] .cmp-config-card .cmp-tab {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.09);
+  color: #94A3B8;
+}
+[data-theme="dark"] .cmp-config-card .cmp-tab:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #F8FAFC;
+}
+[data-theme="dark"] .cmp-config-card .cmp-tab.active {
+  background: var(--brand);
+  color: #1E1202;
+  border-color: var(--brand);
+}
+
+/* Hint text di bawah opsi */
+.cmp-config-card .cmp-hint {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  margin: 10px 0 2px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: rgba(245, 180, 0, 0.08);
+  border-left: 3px solid var(--brand);
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+[data-theme="dark"] .cmp-config-card .cmp-hint {
+  background: rgba(245, 180, 0, 0.06);
+  color: #CBD5E1;
+}
+
+@media (max-width: 900px) {
+  .cmp-config-card {
+    grid-template-columns: 1fr;
+    row-gap: 8px;
+  }
+  .cmp-config-card .cmp-step:nth-of-type(1) { grid-column: 1; grid-row: 1; }
+  .cmp-config-card .compare-mode-tabs:nth-of-type(1) { grid-column: 1; grid-row: 2; margin-bottom: 8px; }
+  .cmp-config-card .cmp-step:nth-of-type(2) { grid-column: 1; grid-row: 3; }
+  .cmp-config-card .compare-mode-tabs:nth-of-type(2) { grid-column: 1; grid-row: 4; }
+  .cmp-config-card .cmp-hint { grid-column: 1; grid-row: 5; }
+}
+
+/* --- 3. Filter Card (Filter Store + Periode / Preset Bersatu) --- */
+.cmp-filter-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  background: rgba(100, 116, 139, 0.05);
+  border: 1px solid var(--border-light);
+  border-radius: 16px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+}
+[data-theme="dark"] .cmp-filter-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.07);
+}
+.cmp-filter-card .cmp-period-bar {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+  gap: 8px;
+  align-items: center;
+  width: auto;
+}
+.cmp-filter-card .cmp-period-bar > label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: 4px;
+}
+.cmp-filter-store {
+  display: inline-flex;
+}
+#cmpStoreFilter {
+  min-width: 170px;
+  max-width: 240px;
+  padding: 6px 10px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+.cmp-filter-card .cmp-period-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border-light);
+  background: var(--panel-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.18s;
+  box-shadow: none;
+}
+.cmp-filter-card .cmp-period-btn:hover {
+  border-color: var(--brand);
+  color: var(--text-main);
+}
+.cmp-filter-card .cmp-period-btn.active {
+  background: var(--brand);
+  color: #3B2504;
+  border-color: var(--brand);
+  font-weight: 700;
+}
+[data-theme="dark"] .cmp-filter-card .cmp-period-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94A3B8;
+}
+[data-theme="dark"] .cmp-filter-card .cmp-period-btn.active {
+  background: var(--brand);
+  color: #1E1202;
+  border-color: var(--brand);
+}
+
+/* Custom Date Row di dalam filter card */
+#cmpCustomDateRow {
+  flex: 1 1 100%;
+  width: 100%;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 8px !important;
+  padding-top: 10px !important;
+  border-top: 1px dashed var(--border-light) !important;
+}
+#cmpCustomDateRow .filter-field {
+  flex: 1 1 170px;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#cmpCustomDateRow .filter-field label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--text-muted);
+}
+#cmpCustomDateRow .filter-field input[type="date"] {
+  width: 100%;
+  font-size: 12.5px;
+  padding: 7px 10px;
+  border-radius: 8px;
+}
+#cmpCustomHint {
+  flex: 1 1 100%;
+  width: 100%;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* --- 4. Hasil Analisis: KPI row & content spacing --- */
+.cmp-kpi-row {
+  margin-top: 12px;
+  gap: 12px;
+}
+.cmp-chart-wrap {
+  margin-top: 10px;
+}
