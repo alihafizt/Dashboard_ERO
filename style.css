@@ -2205,3 +2205,120 @@ lb-name,td.name input,.td.store input{font-size:12.5px !important}
 .pilar-row .ph{font-size:12px !important; margin-bottom:4px !important}
 .pilar-track{height:6px !important}
 .pilar-foot{margin-top:12px !important; padding-top:10px !important; font-size:11px !important}
+
+/* ==========================================================================
+   TEMA v3 — COMMAND BAR, TABEL TOKO, PRIORITAS STORE
+   ========================================================================== */
+
+/* --- Command bar: menempel di atas, satu sumber periode --- */
+.cmdbar{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  background:var(--panel-bg); border:1px solid var(--panel-border);
+  border-radius:var(--r-panel); padding:9px 14px; box-shadow:var(--shadow-sm);
+  margin-bottom:0;
+}
+.cmdbar-brand{display:flex; align-items:center; gap:8px; font-weight:800; font-size:14.5px;
+  letter-spacing:-.02em; color:var(--text-main)}
+.cmdbar-mark{width:24px; height:24px; border-radius:7px; background:var(--brand); color:#3B2504;
+  display:grid; place-items:center; font-size:11.5px; font-weight:800; flex:0 0 24px}
+.cmdbar-spacer{flex:1}
+.cmdbar-field{display:flex; align-items:center; gap:6px}
+.cmdbar-field label{font-size:9.5px; font-weight:800; letter-spacing:.06em;
+  text-transform:uppercase; color:var(--text-muted)}
+.cmdbar-field select{padding:6px 9px; font-size:12px; font-weight:600; border-radius:8px;
+  border:1px solid var(--border-light); background:var(--panel-bg); color:var(--text-main);
+  max-width:180px}
+.cmdbar-btn{padding:6px 11px; font-size:11.5px; border-radius:8px; display:none}
+.cmdbar-btn.show{display:inline-flex}
+.cmdbar-hint{font-size:11px; color:var(--text-muted); font-weight:600}
+.cmdbar-ico{width:30px; height:30px; padding:0; border-radius:8px; display:grid; place-items:center;
+  border:1px solid var(--border-light); background:var(--panel-bg); color:var(--text-muted);
+  font-size:14px; box-shadow:none}
+.cmdbar-ico:hover{border-color:var(--brand); color:var(--brand)}
+@media(max-width:820px){
+  .cmdbar{position:static; padding:10px 12px}
+  .cmdbar-brand{font-size:13px}
+  .cmdbar-hint{display:none}
+  .cmdbar-field select{max-width:150px}
+}
+
+/* --- Zona A: KPI kiri + grade kanan --- */
+.kpi-c1{padding:16px 18px !important; gap:9px !important}
+.kpi-c1 .kpi-period{display:none !important}
+.kpi-c3{padding:16px 18px !important}
+.kpi-grades{padding-top:2px}
+
+/* --- Tabel Ringkasan Toko --- */
+.store-summary-table{width:100%; border-collapse:separate; border-spacing:0}
+.store-summary-table th{position:sticky; top:0; z-index:2; background:var(--tbl-head);
+  padding:8px 10px; font-size:10px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.05em; color:var(--text-muted); text-align:right; white-space:nowrap;
+  border-bottom:1px solid var(--tbl-line)}
+.store-summary-table th.name{text-align:left}
+.store-summary-table td{padding:7px 10px; font-size:12.5px; text-align:right;
+  border-bottom:1px solid var(--tbl-row-line); font-variant-numeric:tabular-nums}
+.store-summary-table td.name{text-align:left; font-weight:600; font-size:12.5px}
+.store-summary-table td b{font-family:'JetBrains Mono',monospace; font-weight:700}
+.store-summary-table tbody tr:hover td{background:var(--tbl-hover)}
+.store-summary-table td.pcell-bad{color:var(--danger); font-weight:700}
+
+.pbar{display:flex; align-items:center; gap:6px; min-width:84px}
+.pbar-t{flex:1; height:5px; border-radius:99px; background:rgba(100,116,139,.18); overflow:hidden}
+.pbar-t i{display:block; height:100%; border-radius:99px}
+.pbar-t i.perfect{background:var(--g-perfect)} .pbar-t i.good{background:var(--g-good)}
+.pbar-t i.needimprove{background:var(--g-need)} .pbar-t i.bad{background:var(--g-bad)}
+.pbar-t i.poor{background:var(--g-poor)}
+.pbar-n{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-muted);
+  width:30px; text-align:right; flex:0 0 30px}
+
+.store-summary-foot{display:flex; gap:16px; flex-wrap:wrap; padding-top:10px;
+  font-size:11px; color:var(--text-muted); border-top:1px solid var(--tbl-row-line); margin-top:2px}
+.store-summary-foot b{color:var(--text-main)}
+
+/* --- Prioritas Store --- */
+.pri-row{display:flex; align-items:center; gap:9px; padding:8px 6px; border-radius:8px}
+.pri-row:hover{background:rgba(100,116,139,.07)}
+[data-theme="dark"] .pri-row:hover{background:rgba(255,255,255,.05)}
+.pri-rk{width:20px; height:20px; flex:0 0 20px; border-radius:6px; display:grid; place-items:center;
+  font-family:'JetBrains Mono',monospace; font-size:10.5px; font-weight:700;
+  background:rgba(100,116,139,.12); color:var(--text-muted)}
+.pri-rk.perfect{background:rgba(4,120,87,.16); color:#047857}
+.pri-rk.good{background:rgba(101,163,13,.16); color:#4D7C0F}
+.pri-rk.needimprove{background:rgba(217,119,6,.16); color:#B45309}
+.pri-rk.bad{background:rgba(234,88,12,.16); color:#C2410C}
+.pri-rk.poor{background:rgba(225,29,72,.16); color:#BE123C}
+[data-theme="dark"] .pri-rk.perfect{color:#34D399}
+[data-theme="dark"] .pri-rk.good{color:#A3E635}
+[data-theme="dark"] .pri-rk.needimprove{color:#FBBF24}
+[data-theme="dark"] .pri-rk.bad{color:#FB923C}
+[data-theme="dark"] .pri-rk.poor{color:#FB7185}
+.pri-who{min-width:0; flex:1; display:flex; flex-direction:column; gap:1px}
+.pri-nm{font-size:12.5px; font-weight:600; color:var(--text-main);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.pri-sub{font-size:10.5px; color:var(--text-muted); white-space:nowrap;
+  overflow:hidden; text-overflow:ellipsis}
+.pri-pt{font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:700;
+  color:var(--danger); white-space:nowrap}
+
+/* --- Grid order Zona C --- */
+.dashboard-grid > .o9{order:9}
+.dashboard-grid > .o10{order:10}
+.dashboard-grid > .bx-8.o9{grid-column:span 8 !important}
+.dashboard-grid > .bx-4.o10{grid-column:span 4 !important}
+@media(max-width:1100px){
+  .dashboard-grid > .bx-8.o9,
+  .dashboard-grid > .bx-4.o10{grid-column:1 / -1 !important}
+}
+
+/* --- Guard anti auto-zoom-out: tidak ada elemen boleh memaksa halaman lebih lebar --- */
+html,body{max-width:100%; overflow-x:hidden}
+.wrap{max-width:1440px; width:100%; padding-left:clamp(12px,2vw,20px); padding-right:clamp(12px,2vw,20px)}
+.app-shell,.app-content{min-width:0}
+.kpi-row,.dashboard-grid{min-width:0}
+.kpi-row > *, .dashboard-grid > *{min-width:0}
+.table-scroll,.compare-table-wrap,.tbl-scroll{max-width:100%}
+.dashboard-grid > .panel{min-width:0}
+#leaderboard{max-width:100%}
+#dashboardCharts{max-width:100%; overflow-x:auto}
+#dashboardCharts svg{max-width:100%}

@@ -71,16 +71,24 @@
   <!-- DASHBOARD VIEW -->
   <div class="view-section active" data-view-section="dashboard">
 
+    <!-- COMMAND BAR: satu sumber periode + filter, menempel di atas -->
+    <div class="cmdbar">
+      <div class="cmdbar-brand"><span class="cmdbar-mark">B2</span>Big Malang 2</div>
+      <div class="cmdbar-spacer"></div>
+      <div class="cmdbar-field">
+        <label>Periode</label>
+        <select id="dashMonthSelect" onchange="changeDashboardMonth(this.value)" aria-label="Pilih periode data Dashboard"><option value="current">Bulan berjalan</option></select>
+      </div>
+      <button id="dashBackBtn" class="cmdbar-btn" onclick="changeDashboardMonth('current')"><i class="ti ti-arrow-back-up"></i>Bulan berjalan</button>
+      <span class="cmdbar-hint" id="dashPeriodHint"></span>
+      <button class="cmdbar-ico" onclick="loadData();loadHistory();" title="Muat ulang data"><i class="ti ti-refresh"></i></button>
+    </div>
+
     <!-- ZONA A: KPI utama + komposisi grade besar -->
     <section class="kpi-row" id="kpiHero" aria-label="Ringkasan performa">
       <div class="panel kpi-c1">
         <div>
           <div class="kpi-lbl">Rata-rata poin ERO <b id="kpiPeriodName"></b></div>
-          <div class="kpi-period" style="display:flex;align-items:center;flex-wrap:wrap;margin-top:8px;">
-            <select id="dashMonthSelect" onchange="changeDashboardMonth(this.value)" aria-label="Pilih periode data Dashboard"><option value="current">Bulan berjalan</option></select>
-            <button id="dashBackBtn" class="kpi-back" onclick="changeDashboardMonth('current')"><i class="ti ti-arrow-back-up"></i>Bulan berjalan</button>
-            <span class="kpi-hint" id="dashPeriodHint"></span>
-          </div>
         </div>
         <div>
           <div class="kpi-big"><span id="statAvg">0</span><span class="kpi-unit">/ 10.00 pts</span></div>
@@ -165,6 +173,27 @@
       <div class="panel o8 dashboard-grid-full">
         <h2><i class="ti ti-chart-line"></i>Tren &amp; Distribusi Grade</h2>
         <div id="dashboardCharts"></div>
+      </div>
+
+      <div class="panel bx-8 o9">
+        <h2><i class="ti ti-building-store"></i>Ringkasan 15 Toko<span class="kpi-lbl" style="margin-left:auto;font-size:10px">urut rata-rata terendah</span></h2>
+        <div class="table-scroll" style="max-height:460px">
+          <table class="store-summary-table">
+            <thead>
+              <tr>
+                <th class="name">Store</th><th>ERO</th><th>Rata²</th><th>Good %</th>
+                <th>Good</th><th>Need</th><th>Bad</th><th>Poor</th>
+              </tr>
+            </thead>
+            <tbody id="dashStoreBody"></tbody>
+          </table>
+        </div>
+        <div class="store-summary-foot" id="dashStoreFoot"></div>
+      </div>
+
+      <div class="panel bx-4 o10">
+        <h2><i class="ti ti-target"></i>Prioritas Store</h2>
+        <div id="dashPriorityStore"></div>
       </div>
 
       <!-- Khusus tampilan arsip: ringkasan store & data lengkap per ERO -->

@@ -458,7 +458,62 @@ function render(){
     if(isAdmin)return `<tr style="${active?'':'opacity:.62;'}"><td class="name"><input value="${escapeAttr(r.name)}" onchange="updateField(${r.idx},'name',this.value)"></td><td class="rank-cell" data-label="Rank"><b>#${rank}</b></td><td class="target-ach-cell">${tapCell}</td><td><span class="grade ${gc}">${grade}</span></td><td><div class="mini-progress"><span style="width:${progress}%"></span></div></td><td><button class="status-toggle ${active?'':'danger'}" onclick="toggleEROStatus(${r.idx})">${active?'Aktif':'Nonaktif'}</button></td><td class="store" data-label="Store"><input value="${escapeAttr(r.store||'')}" onchange="updateField(${r.idx},'store',this.value)"></td><td><button class="rm" data-name="${escapeAttr(r.name)}" onclick="openPersonModal(this.dataset.name)" title="Lihat detail"><i class="ti ti-chart-line"></i></button><button class="rm" onclick="removeRow(${r.idx})"><i class="ti ti-x"></i></button></td></tr>`;
     return `<tr style="${active?'':'opacity:.62;'}"><td class="name readonly-val clickable-name" data-name="${escapeAttr(r.name)}" onclick="openPersonModal(this.dataset.name)">${escapeHtml(r.name)}</td><td class="rank-cell" data-label="Rank"><b>#${rank}</b></td><td class="target-ach-cell">${tapCell}</td><td><span class="grade ${gc}">${grade}</span></td><td><div class="mini-progress"><span style="width:${progress}%"></span></div></td><td>${active?'<span class="active-badge">Aktif</span>':'<span class="inactive-badge">Resign / Nonaktif</span>'}</td><td class="readonly-val" data-label="Store">${escapeHtml(r.store||'')}</td><td></td></tr>`;
   }).join('');
-  renderStoreCompareControls();renderYesterdayToday();renderStoreScore(storeRows);renderMoversPanel();renderAlerts(activeRows,sorted);renderMobileLeader(activeRows);renderMonthlyCompare();renderDashboardCharts(activeRows);renderDashboardArchiveExtras(dsv);
+  renderStoreCompareControls();renderYesterdayToday();renderStoreScore(storeRows);renderMoversPanel();renderAlerts(activeRows,sorted);renderMobileLeader(activeRows);renderMonthlyCompare();renderDashboardCharts(activeRows);renderDashboardArchiveExtras(dsv);renderDashStoreSummary(storeRows);
+}
+
+// =========================================
+// DASHBOARD: ringkasan 15 toko + prioritas store (V2)
+// =========================================
+function renderDashStoreSummary(storeRows){
+  const body=document.getElementById('dashStoreBody');
+  if(!body) return;
+  if(!storeRows||!storeRows.length){
+    body.innerHTML='<tr><td colspan="8" class="empty">Belum ada data store.</td></tr>';
+    const f0=document.getElementById('dashStoreFoot'); if(f0) f0.innerHTML='';
+    const p0=document.getElementById('dashPriorityStore'); if(p0) p0.innerHTML='<div class="empty">Belum ada data.</div>';
+    return;
+  }
+  body.innerHTML=storeRows.map(s=>{
+    const good=s.Perfect+s.Good;
+    const goodPct=s.count?Math.round(good/s.count*100):0;
+    const g=calcGrade(s.avg), gc=gradeClass(g);
+    return `<tr>
+      <td class="name clickable-name" data-store="${escapeAttr(s.store)}" onclick="openStoreModal(this.dataset.store)">${escapeHtml(s.store)}</td>
+      <td>${s.count}</td>
+      <td><b>${s.avg.toFixed(2)}</b></td>
+      <td><div class="pbar"><div class="pbar-t"><i class="${gc}" style="width:${goodPct}%"></i></div><span class="pbar-n">${goodPct}%</span></div></td>
+      <td>${good}</td>
+      <td>${s['Need Improve']}</td>
+      <td>${s.Bad}</td>
+      <td class="${s.Poor?'pcell-bad':''}">${s.Poor}</td>
+    </tr>`;
+  }).join('');
+
+  const foot=document.getElementById('dashStoreFoot');
+  if(foot){
+    const allCount=storeRows.reduce((a,s)=>a+s.count,0);
+    const allSum=storeRows.reduce((a,s)=>a+s.avg*s.count,0);
+    const area=allCount?allSum/allCount:0;
+    const under=storeRows.filter(s=>s.avg<7).length;
+    foot.innerHTML=`<span>Rata-rata area <b>${area.toFixed(2)}</b></span>`
+      +`<span>Toko di bawah 7.00: <b>${under}</b></span>`
+      +`<span>Total <b>${storeRows.length}</b> toko · <b>${allCount}</b> ERO</span>`;
+  }
+
+  const pri=document.getElementById('dashPriorityStore');
+  if(pri){
+    pri.innerHTML=storeRows.slice(0,5).map((s,i)=>{
+      const g=calcGrade(s.avg), gc=gradeClass(g);
+      return `<div class="pri-row">
+        <span class="pri-rk ${gc}">${i+1}</span>
+        <span class="pri-who">
+          <span class="pri-nm">${escapeHtml(s.store)}</span>
+          <span class="pri-sub">${s.count} ERO · ${s.Bad} bad · ${s.Poor} poor</span>
+        </span>
+        <span class="pri-pt">${s.avg.toFixed(2)}</span>
+      </div>`;
+    }).join('');
+  }
 }
 
 // =========================================
