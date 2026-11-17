@@ -560,7 +560,14 @@ function renderKpiHero(dActive,dsv){
     stack.setAttribute('aria-label','Distribusi grade: '+GRADE_ORDER.map(g=>`${g} ${counts[g]}`).join(', '));
   }
   const legend=document.getElementById('kpiLegend');
-  if(legend) legend.innerHTML=GRADE_ORDER.map(g=>`<li class="${counts[g]?'':'zero'} lg-${gradeClass(g)}"><i class="g-sw ${gradeClass(g)}"></i><span class="lg-name">${g}</span><b>${counts[g]}</b><span class="lg-pct">${pctOf(g)}%</span></li>`).join('');
+  if(legend) legend.innerHTML=GRADE_ORDER.map(g=>{
+    const p=pctOf(g);
+    return `<li class="${counts[g]?'':'zero'} lg-${gradeClass(g)}">
+      <div class="lg-name">${g}</div>
+      <b>${counts[g]}</b>
+      <span class="lg-pct-pill">${p}%</span>
+    </li>`;
+  }).join('');
 }
 
 function renderBentoExtras(dActive,dsv){
