@@ -575,6 +575,7 @@ function renderBentoExtras(dActive,dsv){
   const n=dActive.length, total=dsv.archive?n:rows.length;
   set('kpiTotalEro','/ '+total+' terdaftar');
   set('kpiStoreCount',new Set(dActive.map(r=>r.store).filter(Boolean)).size+' Toko');
+  set('gradeTotalEro',n+'');
   set('kpiActivePct',total?((n/total*100).toFixed(1)+'% ERO aktif'):'');
   const c=g=>dActive.filter(r=>calcGrade(r.total)===g).length, pc=v=>n?Math.round(v/n*100)+'%':'0%';
   set('kpiHealthy',pc(c('Perfect')+c('Good'))); set('kpiWatch',pc(c('Bad')+c('Poor')));

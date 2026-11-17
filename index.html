@@ -71,7 +71,7 @@
   <!-- DASHBOARD VIEW -->
   <div class="view-section active" data-view-section="dashboard">
 
-    <!-- KPI hero: rata-rata poin, pembanding bulan lalu, tren, distribusi grade, dan pemilih periode -->
+    <!-- ZONA A: KPI utama + komposisi grade besar -->
     <section class="kpi-row" id="kpiHero" aria-label="Ringkasan performa">
       <div class="panel kpi-c1">
         <div>
@@ -87,23 +87,29 @@
           <div style="margin-top:8px;"><span class="kpi-delta none" id="kpiDelta"></span></div>
         </div>
         <div class="kpi-spark" id="kpiSpark"></div>
-        <div class="kpi-foot">Target grade Good: <b>8.00 pts</b></div>
-      </div>
-      <div class="panel kpi-c2">
-        <div class="kpi-lbl">ERO Aktif</div>
-        <div>
-          <div class="kpi-big"><span id="statCount">0</span><span class="kpi-unit" id="kpiTotalEro"></span></div>
-          <div class="kpi-meta"><span id="kpiStoreCount"></span><span id="lastUpdate"></span></div>
+        <div class="kpi-mini-row">
+          <div class="kpi-mini"><div class="k">ERO Aktif</div><div class="v" id="statCount">0</div><div class="s" id="kpiTotalEro"></div></div>
+          <div class="kpi-mini"><div class="k">Toko</div><div class="v" id="kpiStoreCount">0</div><div class="s" id="lastUpdate"></div></div>
         </div>
         <div class="kpi-foot" id="kpiActivePct"></div>
+        <div class="kpi-foot">Target grade Good: <b>8.00 pts</b></div>
       </div>
+
       <div class="panel kpi-c3">
-        <div class="kpi-lbl" style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;">Komposisi Mutu Kinerja <span style="color:var(--brand);font-family:'JetBrains Mono',monospace;">Standar Good ≥ 8.0</span></div>
+        <div class="grade-head">
+          <div>
+            <div class="kpi-lbl">Komposisi Grade ERO</div>
+            <div class="grade-total"><b id="gradeTotalEro">0</b><span>ERO aktif · target Good ≥ 8.00</span></div>
+          </div>
+          <div class="kpi-tiers">
+            <span>Healthy Tier<b class="ok" id="kpiHealthy">0%</b></span>
+            <span>Watch Tier<b class="warn" id="kpiWatch">0%</b></span>
+          </div>
+        </div>
         <div class="kpi-grades">
           <div class="kpi-stack" id="kpiStack" role="img"></div>
           <ul class="kpi-legend" id="kpiLegend"></ul>
         </div>
-        <div class="kpi-tiers"><span>Healthy Tier (Good+): <b class="ok" id="kpiHealthy">0%</b></span><span>Watch Tier (Bad/Poor): <b class="warn" id="kpiWatch">0%</b></span></div>
       </div>
     </section>
     <div class="archive-note dash-archive-banner" id="dashArchiveBanner" data-archive-only></div>
@@ -120,45 +126,45 @@
     </div>
 
     <div class="dashboard-grid">
-      <div class="panel bx-7 o1">
+      <div class="panel bx-4 o1">
         <h2><i class="ti ti-medal"></i>Top 3</h2>
         <div id="podium" class="podium"></div>
       </div>
 
-      <div class="panel bx-6 o5" data-live-only>
-        <h2><i class="ti ti-bell"></i>Alert Otomatis</h2>
-        <div id="alertPanel" class="alert-list"></div>
-      </div>
-
-      <div class="panel bx-5 o2">
+      <div class="panel bx-4 o2">
         <h2><i class="ti ti-alert-triangle"></i>Bottom 3 — Perlu Perhatian</h2>
         <div id="watchlist"></div>
       </div>
 
-      <div class="panel bx-6 o6" data-live-only>
+      <div class="panel bx-4 o3" data-live-only>
+        <h2><i class="ti ti-bell"></i>Alert Otomatis</h2>
+        <div id="alertPanel" class="alert-list"></div>
+      </div>
+
+      <div class="panel bx-6 o4" data-live-only>
         <h2><i class="ti ti-bolt"></i>Yesterday vs Today</h2>
         <div id="yesterdayToday" class="insight-grid"></div>
       </div>
 
-      <div class="panel o7 dashboard-grid-full" data-live-only>
+      <div class="panel bx-6 o5" data-live-only>
         <h2><i class="ti ti-arrows-up-down"></i>Most Improved &amp; Biggest Drop</h2>
         <div id="moversPanel" class="insight-grid"></div>
       </div>
 
-      <div class="panel bx-8 o3 dashboard-grid-full">
-        <h2><i class="ti ti-chart-line"></i>Tren &amp; Distribusi Grade</h2>
-        <div id="dashboardCharts"></div>
-      </div>
-
-      <div class="panel o8 dashboard-grid-full">
+      <div class="panel bx-8 o6">
         <h2><i class="ti ti-list-details"></i>Papan Peringkat Lengkap<span id="dashLbSuffix"></span></h2>
         <div id="leaderboard"></div>
       </div>
 
-      <div class="panel bx-4 o4">
+      <div class="panel bx-4 o7">
         <h2><i class="ti ti-layout-grid"></i>Pilar Kategori Poin</h2>
         <div class="pilar-list" id="pilarList"></div>
         <div class="pilar-foot" id="pilarFoot"></div>
+      </div>
+
+      <div class="panel o8 dashboard-grid-full">
+        <h2><i class="ti ti-chart-line"></i>Tren &amp; Distribusi Grade</h2>
+        <div id="dashboardCharts"></div>
       </div>
 
       <!-- Khusus tampilan arsip: ringkasan store & data lengkap per ERO -->

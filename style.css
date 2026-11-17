@@ -2117,3 +2117,91 @@ lb-name,td.name input,.td.store input{font-size:12.5px !important}
 /* Utilitas kecil agar konsisten */
 .panel,.insight-card,.score-card,.compare-kpi,.mobile-kpi,.tool-card,.filter-bar,.alert-item,.watch-row,
 .modal-kpi,.upload-zone,.history-summary,.store-pair-card,.focus-box{border-radius:var(--r-card) !important}
+
+/* ==========================================================================
+   TEMA v3 — LAYOUT: Zona A (KPI + grade besar), Zona B (3 kolom), Zona C
+   ========================================================================== */
+
+/* --- Zona A: 4 kolom KPI + 8 kolom grade --- */
+.kpi-row{grid-template-columns:repeat(12,minmax(0,1fr)) !important; gap:12px !important; margin-bottom:12px}
+.kpi-c1{grid-column:span 4 !important; display:flex; flex-direction:column; gap:10px !important}
+.kpi-c3{grid-column:span 8 !important; display:flex; flex-direction:column; gap:12px !important}
+@media(max-width:1100px){
+  .kpi-c1{grid-column:span 6 !important}
+  .kpi-c3{grid-column:span 6 !important}
+}
+@media(max-width:820px){
+  .kpi-c1,.kpi-c3{grid-column:span 12 !important}
+}
+.kpi-c2{display:none !important}
+
+/* statAvg besar, statCount pindah ke kartu mini */
+#statAvg{font:700 clamp(38px,4.4vw,48px)/1 'JetBrains Mono',monospace !important;
+  letter-spacing:-.045em; font-variant-numeric:tabular-nums; color:var(--text-main)}
+#statCount{font:700 22px/1 'JetBrains Mono',monospace !important; letter-spacing:-.03em; color:var(--text-main)}
+#kpiStoreCount{font:700 22px/1 'JetBrains Mono',monospace; letter-spacing:-.03em; color:var(--text-main)}
+
+/* dua kartu mini di dalam KPI kiri */
+.kpi-mini-row{display:grid; grid-template-columns:1fr 1fr; gap:8px; padding-top:12px;
+  border-top:1px solid var(--border-light); margin-top:2px}
+.kpi-mini .k{font-size:9.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--text-muted); margin-bottom:3px}
+.kpi-mini .v{font:700 22px/1.05 'JetBrains Mono',monospace; letter-spacing:-.03em;
+  color:var(--text-main); font-variant-numeric:tabular-nums}
+.kpi-mini .s{font-size:10.5px; color:var(--text-muted); font-weight:600; margin-top:3px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+/* header blok grade */
+.grade-head{display:flex; align-items:flex-end; justify-content:space-between; gap:14px; flex-wrap:wrap}
+.grade-total{display:flex; align-items:baseline; gap:8px; margin-top:3px}
+.grade-total b{font:700 32px/1 'JetBrains Mono',monospace; letter-spacing:-.04em; color:var(--text-main)}
+.grade-total span{font-size:11.5px; color:var(--text-muted); font-weight:600}
+
+/* tier: angka besar di kanan atas */
+.kpi-tiers{display:flex; gap:20px; flex-wrap:wrap}
+.kpi-tiers > span{display:flex; flex-direction:column; gap:1px; font-size:9.5px; font-weight:800;
+  letter-spacing:.06em; text-transform:uppercase; color:var(--text-muted)}
+.kpi-tiers b{font:700 20px/1.1 'JetBrains Mono',monospace !important; letter-spacing:-.02em;
+  text-transform:none; letter-spacing:0}
+.kpi-tiers b.ok{color:var(--success) !important}
+.kpi-tiers b.warn{color:var(--danger) !important}
+
+/* --- Zona B: 3 kartu sejajar --- */
+.dashboard-grid{grid-template-columns:repeat(12,minmax(0,1fr)) !important; gap:12px !important}
+.dashboard-grid > .bx-4{grid-column:span 4 !important}
+.dashboard-grid > .bx-6{grid-column:span 6 !important}
+.dashboard-grid > .bx-8{grid-column:span 8 !important}
+.dashboard-grid > .bx-5{grid-column:span 5 !important}
+.dashboard-grid > .bx-7{grid-column:span 7 !important}
+.dashboard-grid > .panel{grid-column:span 12}
+@media(max-width:1100px){
+  .dashboard-grid > .panel{grid-column:1 / -1 !important}
+}
+
+/* --- Podium lebih rapat di kolom 4/12 --- */
+.podium{min-height:auto !important; padding:34px 4px 2px !important; gap:8px !important; align-items:stretch !important}
+.podium-card{max-width:none !important; padding:36px 8px 12px !important; border-radius:12px !important}
+.podium-card.p1{min-height:0 !important; padding-top:38px !important; margin-top:0 !important}
+.podium-card.p2{margin-top:22px !important}
+.podium-card.p3{margin-top:34px !important}
+.avatar{width:46px !important; height:46px !important; font-size:14px !important; top:-23px !important; border-width:3px !important}
+.rank-badge{width:20px !important; height:20px !important; font-size:9px !important}
+.podium-bar .pt,.p1 .podium-bar .pt{font-size:21px !important}
+.podium-name{font-size:12px !important; margin-top:7px !important}
+.podium-store{font-size:9.5px !important}
+
+/* watchlist baris ringkas */
+.watch-row{padding:9px 11px !important; margin-bottom:6px !important; border-radius:8px !important}
+.watch-name{font-size:12.5px !important}
+.watch-store{font-size:10.5px !important}
+.watch-pt{font-size:16px !important}
+.alert-list{gap:6px !important}
+.alert-item{padding:9px 11px !important; gap:9px !important}
+.alert-item strong{font-size:12.5px !important}
+.alert-item div{font-size:11.5px !important}
+
+/* --- Pilar: bar tipis + footer rapat --- */
+.pilar-list{gap:10px !important}
+.pilar-row .ph{font-size:12px !important; margin-bottom:4px !important}
+.pilar-track{height:6px !important}
+.pilar-foot{margin-top:12px !important; padding-top:10px !important; font-size:11px !important}
