@@ -2604,3 +2604,56 @@ input:focus, select:focus, textarea:focus {
   .app-content { gap: 12px; }
   .panel { padding: 14px; }
 }
+
+
+/* =====================================================================
+   Penyesuaian Dashboard (di atas desain baru) — hanya CSS, tanpa mengubah JS/HTML
+   1) Komposisi Grade proporsional  2) Baris Top3/Bottom3/Alert sama tinggi
+   3) Pilar + Prioritas Store di kolom kanan, Ringkasan Toko lebar penuh
+   4) Menu samping ikut bergeser saat scroll
+   ===================================================================== */
+
+/* 4) Menu samping: penyebab sticky mati adalah overflow-x:hidden pada html DAN body.
+      overflow-x:clip tidak membuat area scroll baru, sehingga sticky kembali bekerja. */
+@media (min-width: 901px) {
+  html, body { overflow-x: clip !important; }
+  .app-shell { align-items: flex-start !important; }
+  .app-sidebar {
+    position: sticky !important; top: 24px !important; align-self: flex-start !important;
+    max-height: calc(100vh - 48px); overflow-y: auto; scrollbar-width: thin;
+  }
+}
+
+@media (min-width: 1101px) {
+
+  /* 1) Komposisi Grade: kartu kiri 3 kolom, kartu kanan 9 kolom, isi mengisi tinggi kartu */
+  .kpi-row { align-items: stretch !important; }
+  .kpi-row > .kpi-c1 { grid-column: span 3 !important; }
+  .kpi-row > .kpi-c3 { grid-column: span 9 !important; justify-content: flex-start !important; gap: 18px !important; }
+  .kpi-row > .kpi-c3 .kpi-grades {
+    flex: 1 1 auto; display: flex; flex-direction: column; justify-content: center; gap: 22px;
+    border: 0 !important; padding: 0 !important;
+  }
+  .kpi-row > .kpi-c3 .kpi-stack { height: 36px !important; }
+  .kpi-row > .kpi-c3 .kpi-legend { margin: 0 !important; gap: 12px !important; grid-auto-rows: 1fr; }
+  .kpi-row > .kpi-c3 .kpi-legend li { padding: 16px 18px !important; gap: 6px !important; }
+  .kpi-row > .kpi-c3 .kpi-legend li b { font-size: 30px !important; line-height: 1; }
+
+  /* 2) Panel dalam satu baris dibuat sama tinggi, isinya ikut memenuhi tinggi */
+  .dashboard-grid { align-items: stretch !important; grid-auto-flow: row dense !important; }
+  .dashboard-grid > .o1, .dashboard-grid > .o2, .dashboard-grid > .o3,
+  .dashboard-grid > .o4, .dashboard-grid > .o5,
+  .dashboard-grid > .o7, .dashboard-grid > .o10 { display: flex; flex-direction: column; }
+  #podium, #watchlist, #alertPanel, #yesterdayToday, #moversPanel, #pilarList, #dashPriorityStore { flex: 1 1 auto; }
+  #podium { align-items: flex-end; }
+  #watchlist, #alertPanel { display: flex; flex-direction: column; gap: 10px; }
+  #watchlist > *, #alertPanel > * { flex: 1 1 0; margin: 0 !important; }
+
+  /* 3) Susunan baris: Papan Peringkat (2 baris) | Pilar di atas Prioritas Store, lalu Tren, lalu Ringkasan Toko lebar penuh */
+  .dashboard-grid > .o6  { order: 6 !important;  grid-row: span 2; }
+  .dashboard-grid > .o7  { order: 7 !important; }
+  .dashboard-grid > .o10 { order: 8 !important; }
+  .dashboard-grid > .o8  { order: 9 !important; }
+  .dashboard-grid > .bx-8.o9 { order: 10 !important; grid-column: 1 / -1 !important; }
+  .dashboard-grid > [data-archive-only] { order: 20 !important; }
+}
