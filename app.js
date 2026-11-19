@@ -3266,17 +3266,75 @@ function shotBgColor(){
 }
 function shotCapture(el, extra={}){
   window.scrollTo(0,0);
+  shotMarkValues(el);
   return html2canvas(el, Object.assign({
     backgroundColor: shotBgColor(), scale:2.5, useCORS:true, logging:false,
-    scrollX:0, scrollY:0
-  }, extra)).then(c=>new Promise(res=>c.toBlob(res,'image/png')));
+    scrollX:0, scrollY:0,
+    onclone:(doc)=>{ try{ shotFlattenIn(doc.body); }catch(e){ console.error(e); } }
+  }, extra))
+    .then(c=>new Promise(res=>c.toBlob(res,'image/png')))
+    .finally(()=>shotUnmarkValues(el));
 }
-// Dashboard: potong di bagian awal Papan Peringkat (seperti contoh), agar tidak terlalu panjang
+// Teks di dalam <input>/<select> sering tergeser ke bawah dan terpotong oleh html2canvas.
+// Solusi: di salinan yang difoto, ganti kolom isian menjadi kotak teks biasa dengan gaya yang sama.
+const SHOT_FIELDS='input:not([type=checkbox]):not([type=radio]):not([type=hidden]):not([type=file]):not([type=date]):not([type=button]):not([type=submit]), select, textarea';
+function shotMarkValues(root){
+  root.querySelectorAll(SHOT_FIELDS).forEach(f=>{
+    let v=f.value||'';
+    if(f.tagName==='SELECT') v=f.selectedOptions&&f.selectedOptions[0] ? f.selectedOptions[0].text : '';
+    f.setAttribute('data-shot-val', v);
+  });
+}
+function shotUnmarkValues(root){
+  root.querySelectorAll('[data-shot-val]').forEach(f=>f.removeAttribute('data-shot-val'));
+}
+function shotFlattenIn(root){
+  const doc=root.ownerDocument, win=doc.defaultView;
+  const copy=['fontFamily','fontSize','fontWeight','letterSpacing','color','backgroundColor','boxShadow','boxSizing',
+    'borderTopWidth','borderRightWidth','borderBottomWidth','borderLeftWidth',
+    'borderTopStyle','borderRightStyle','borderBottomStyle','borderLeftStyle',
+    'borderTopColor','borderRightColor','borderBottomColor','borderLeftColor',
+    'borderTopLeftRadius','borderTopRightRadius','borderBottomRightRadius','borderBottomLeftRadius',
+    'paddingTop','paddingRight','paddingBottom','paddingLeft','marginTop','marginRight','marginBottom','marginLeft',
+    'width','height','minWidth','maxWidth','flexGrow','flexShrink','flexBasis'];
+  root.querySelectorAll(SHOT_FIELDS).forEach(f=>{
+    if(!f.parentNode) return;
+    const cs=win.getComputedStyle(f);
+    const d=doc.createElement('div');
+    copy.forEach(k=>{ d.style[k]=cs[k]; });
+    d.style.backgroundImage='none';
+    d.style.display='flex';
+    d.style.alignItems='center';
+    d.style.justifyContent= cs.textAlign==='center' ? 'center' : 'flex-start';
+    d.style.overflow='hidden';
+    d.style.lineHeight='1.25';
+    const raw=f.getAttribute('data-shot-val');
+    const val=(raw!==null ? raw : (f.value||''));
+    const t=doc.createElement('span');
+    t.style.cssText='min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    t.textContent = val || f.getAttribute('placeholder') || '';
+    if(!val && f.getAttribute('placeholder')) t.style.opacity='.55';
+    d.appendChild(t);
+    if(f.tagName==='SELECT'){
+      const ch=doc.createElement('span');
+      ch.style.cssText='flex:0 0 auto;margin-left:8px;opacity:.7;font-size:.85em;';
+      ch.textContent='\u25BE';
+      d.appendChild(ch);
+    }
+    f.parentNode.replaceChild(d,f);
+  });
+}
+// Dashboard: hanya bagian atas (KPI, Top 3 / Bottom 3 / Alert, Kemarin vs Hari ini, Most Improved & Biggest Drop).
+// Naikkan SHOT_DASH_EXTRA_PX jika ingin ikut menyertakan beberapa baris awal Papan Peringkat.
+const SHOT_DASH_EXTRA_PX = 0;
 function shotDashboardHeight(dash){
-  const heads=[...dash.querySelectorAll('*')].filter(e=>e.childElementCount===0 && /papan peringkat/i.test(e.textContent||''));
-  if(!heads.length) return dash.scrollHeight;
-  const top=heads[0].getBoundingClientRect().top - dash.getBoundingClientRect().top;
-  return Math.min(dash.scrollHeight, Math.round(top + 760));
+  const top=dash.getBoundingClientRect().top;
+  const grid=dash.querySelector('.dashboard-grid');
+  const panels=grid ? [...grid.querySelectorAll(':scope > .o1, :scope > .o2, :scope > .o3, :scope > .o4, :scope > .o5')] : [];
+  const visible=panels.filter(el=>{ const r=el.getBoundingClientRect(); return r.height>0 && r.width>0; });
+  if(!visible.length) return dash.scrollHeight;
+  const bottom=Math.max(...visible.map(el=>el.getBoundingClientRect().bottom));
+  return Math.min(dash.scrollHeight, Math.round(bottom - top + 12 + SHOT_DASH_EXTRA_PX));
 }
 function shotDownload(blob,name){
   const a=document.createElement('a');
