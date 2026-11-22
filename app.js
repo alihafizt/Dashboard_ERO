@@ -113,6 +113,7 @@ function switchView(view){
   document.querySelectorAll('.view-section').forEach(sec=>sec.classList.toggle('active',sec.dataset.viewSection===view));
   window.scrollTo({top:0,behavior:'instant'});
   if(view==='compare') renderCompareView();
+  if(view==='reviews') loadReviewDashboardData();
 }
 async function loadAdminState(){
   if(!SUPABASE_READY){isAdmin=false;updateAdminUI();syncMessage('Supabase belum dikonfigurasi. Isi SUPABASE_URL dan SUPABASE_ANON_KEY di index.html.',false);return;}
@@ -3474,4 +3475,145 @@ function shotFixOpacity(root){
     }
   });
   return ()=>changed.forEach(([el,v])=>{ el.style.opacity=v; });
+}
+
+
+// =========================================================
+// GOOGLE REVIEW MONITOR LOGIC
+// =========================================================
+
+let reviewStoresList = [];
+let reviewRecentLogs = [];
+
+async function loadReviewDashboardData() {
+  if (!SUPABASE_READY) {
+    console.warn('Supabase belum ready untuk ulasan.');
+    return;
+  }
+
+  try {
+    // 1. Ambil snapshot metrik terbaru per toko
+    const { data: metricsData, error: mErr } = await sb
+      .from('review_metrics')
+      .select('*')
+      .order('scraped_at', { ascending: false })
+      .limit(100);
+
+    if (mErr) console.error('Error fetching review metrics:', mErr);
+
+    // Ambil data terbaru per toko unik
+    const storeMap = {};
+    if (metricsData) {
+      metricsData.forEach(item => {
+        if (!storeMap[item.store]) {
+          storeMap[item.store] = item;
+        }
+      });
+    }
+    reviewStoresList = Object.values(storeMap);
+
+    // 2. Ambil log ulasan terbaru (50 ulasan terakhir)
+    const { data: logsData, error: lErr } = await sb
+      .from('review_log')
+      .select('*')
+      .order('scraped_at', { ascending: false })
+      .limit(50);
+
+    if (lErr) console.error('Error fetching review logs:', lErr);
+    reviewRecentLogs = logsData || [];
+
+    renderReviewView();
+  } catch (err) {
+    console.error('Gagal memuat data review:', err);
+  }
+}
+
+function renderReviewView() {
+  // KPI Metrics
+  const totalReviews = reviewStoresList.reduce((acc, s) => acc + (s.total_reviews || 0), 0);
+  const totalDelta = reviewStoresList.reduce((acc, s) => acc + (s.delta_reviews || 0), 0);
+  
+  const avgRatingCalc = reviewStoresList.length > 0
+    ? (reviewStoresList.reduce((acc, s) => acc + parseFloat(s.avg_rating || 0), 0) / reviewStoresList.length).toFixed(2)
+    : '0.0';
+
+  const negativeCount = reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2).length;
+
+  const lastUpdate = reviewStoresList.length > 0 && reviewStoresList[0].scraped_at
+    ? new Date(reviewStoresList[0].scraped_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })
+    : '-';
+
+  // Update KPI UI
+  const elTotal = document.getElementById('revStatTotalReviews');
+  const elDelta = document.getElementById('revStatDeltaReviews');
+  const elAvg = document.getElementById('revStatAvgRating');
+  const elNeg = document.getElementById('revStatNegativeCount');
+  const elTime = document.getElementById('revStatLastUpdate');
+
+  if (elTotal) elTotal.textContent = totalReviews.toLocaleString('id-ID');
+  if (elDelta) elDelta.innerHTML = totalDelta > 0 
+    ? `<span style="color:#10B981; font-weight:700;">+${totalDelta}</span> ulasan baru minggu ini`
+    : `Stabil (tidak ada lonjakan)`;
+  if (elAvg) elAvg.textContent = avgRatingCalc;
+  if (elNeg) elNeg.textContent = negativeCount;
+  if (elTime) elTime.textContent = lastUpdate;
+
+  // Render Tabel Toko (Sort by Rating Descending)
+  const tbody = document.getElementById('revStoreTableBody');
+  if (tbody) {
+    if (reviewStoresList.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada data ulasan tersimpan di Supabase. Silakan jalankan script monitor.</td></tr>`;
+    } else {
+      const sorted = [...reviewStoresList].sort((a, b) => (parseFloat(b.avg_rating) || 0) - (parseFloat(a.avg_rating) || 0));
+      tbody.innerHTML = sorted.map((s, idx) => {
+        const rating = parseFloat(s.avg_rating || 0).toFixed(1);
+        const deltaRev = s.delta_reviews || 0;
+        const deltaText = deltaRev > 0 ? `<span style="color:#10B981; font-weight:bold;">+${deltaRev}</span>` : `<span style="color:var(--text-muted);">0</span>`;
+        
+        let statusBadge = `<span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981;">Baik</span>`;
+        if (parseFloat(rating) < 4.5) {
+          statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.1); color:#EF4444;">Perlu Perhatian</span>`;
+        }
+
+        return `
+          <tr>
+            <td style="text-align:center; font-weight:700; color:var(--text-muted);">${idx + 1}</td>
+            <td class="name"><b>${escapeHtml(s.store)}</b></td>
+            <td><b style="color:#F59E0B;">★ ${rating}</b></td>
+            <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
+            <td>${deltaText}</td>
+            <td>${statusBadge}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+  }
+
+  // Render Feed Ulasan Terbaru
+  const feed = document.getElementById('revFeedContainer');
+  if (feed) {
+    if (reviewRecentLogs.length === 0) {
+      feed.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada ulasan yang terekam.</div>`;
+    } else {
+      feed.innerHTML = reviewRecentLogs.map(r => {
+        const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
+        const isNeg = r.is_negative || (r.rating_num <= 2);
+        const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+
+        return `
+          <div class="${cardClass}">
+            <div class="review-card-header">
+              <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
+              <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+              <span class="review-stars">${stars}</span>
+            </div>
+            <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
 }

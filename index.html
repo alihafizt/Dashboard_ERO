@@ -43,6 +43,7 @@
       <button class="nav-item" data-view="reports" onclick="switchView('reports')" title="Report"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="1.5"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg><span class="nav-label">Report</span></button>
       <button class="nav-item" data-view="compare" onclick="switchView('compare')" title="Analisis Progres"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-5"/></svg><span class="nav-label">Analisis</span></button>
       <button class="nav-item" data-view="monthly" onclick="switchView('monthly')" title="Arsip Bulanan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20.5" x2="20" y2="20.5"/><rect x="6" y="10.5" width="3.6" height="9.5"/><rect x="14.4" y="5.5" width="3.6" height="14.5"/></svg><span class="nav-label">Arsip</span></button>
+      <button class="nav-item" data-view="reviews" onclick="switchView('reviews')" title="Google Review"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="nav-label">Google Review</span></button>
       <button class="nav-item" data-view="settings" id="navSettings" style="display:none;" onclick="switchView('settings')" title="Kelola Data"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg><span class="nav-label">Kelola Data</span><span id="snapshotNavBadge" class="snapshot-nav-badge" style="display:none;" title="Snapshot hari ini belum disimpan"></span></button>
     </nav>
     <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Ciutkan menu">
@@ -446,6 +447,68 @@
       </div>
   </div>
   <!-- /REPORTS VIEW -->
+
+  <!-- GOOGLE REVIEWS VIEW -->
+  <div class="view-section" data-view-section="reviews">
+    <!-- KPI Overview -->
+    <div class="review-kpi-grid">
+      <div class="panel review-kpi-card">
+        <div class="kpi-lbl">Total Ulasan (15 Toko)</div>
+        <div class="kpi-big"><span id="revStatTotalReviews">0</span></div>
+        <div class="sub" style="margin-top:6px; font-size:13px;" id="revStatDeltaReviews">Pergerakan: 0</div>
+      </div>
+      <div class="panel review-kpi-card">
+        <div class="kpi-lbl">Rata-rata Rating Toko</div>
+        <div class="kpi-big"><span id="revStatAvgRating">0.0</span> <span style="font-size:18px; color:#F59E0B;">★</span></div>
+        <div class="sub" style="margin-top:6px; font-size:13px;" id="revStatDeltaRating">Skala 1 - 5.0</div>
+      </div>
+      <div class="panel review-kpi-card">
+        <div class="kpi-lbl">Ulasan Negatif (★1 - ★2)</div>
+        <div class="kpi-big" style="color:#EF4444;"><span id="revStatNegativeCount">0</span></div>
+        <div class="sub" style="margin-top:6px; font-size:13px;">Perlu segera di-follow up</div>
+      </div>
+      <div class="panel review-kpi-card">
+        <div class="kpi-lbl">Update Terakhir</div>
+        <div style="font-size:18px; font-weight:700; margin-top:10px;" id="revStatLastUpdate">-</div>
+        <div class="sub" style="margin-top:6px; font-size:12px;">Auto-sync Google Maps</div>
+      </div>
+    </div>
+
+    <!-- Peringkat Toko Berdasarkan Rating -->
+    <div class="panel" style="margin-top:20px;">
+      <div class="panel-head-row">
+        <h2><i class="ti ti-star"></i>Performa Google Review 15 Toko</h2>
+        <div class="sub" style="color:var(--text-muted); font-size:12px;">Diurutkan dari rating tertinggi</div>
+      </div>
+      <div class="table-scroll" style="margin-top:12px;">
+        <table class="store-summary-table">
+          <thead>
+            <tr>
+              <th style="width:50px;">Rank</th>
+              <th class="name">Nama Toko</th>
+              <th>Rating Rata-rata</th>
+              <th>Total Review</th>
+              <th>Pergerakan (Delta)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="revStoreTableBody">
+            <tr><td colspan="6" style="text-align:center; padding:20px;">Memuat data ulasan...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Feed Ulasan Terbaru -->
+    <div class="panel" style="margin-top:20px;">
+      <h2><i class="ti ti-message-2"></i>Ulasan Terbaru Pelanggan</h2>
+      <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Ulasan baru yang ditarik dari seluruh store. Ulasan bintang 1-2 diberi tanda merah untuk perhatian khusus.</div>
+      <div id="revFeedContainer" class="review-feed-list">
+        <div style="text-align:center; padding:20px; color:var(--text-muted);">Memuat ulasan terbaru...</div>
+      </div>
+    </div>
+  </div>
+  <!-- /GOOGLE REVIEWS VIEW -->
 
   </div>
 </div>
