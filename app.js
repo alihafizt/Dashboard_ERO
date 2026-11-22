@@ -3734,7 +3734,27 @@ function filterModalStoreReviews(tab) {
   const content = document.getElementById('storeReviewModalContent');
   if (!content) return;
 
+  // Filter waktu ulasan: buang ulasan yang sudah berbulan-bulan / bertahun-tahun lalu jika ingin lihat yang fresh
   let storeReviews = reviewRecentLogs.filter(r => r.store === currentModalStore);
+
+  // Sortir agar ulasan paling baru (hari / minggu lalu) selalu di paling atas
+  storeReviews.sort((a, b) => {
+    function getWeight(t) {
+      if (!t) return 999;
+      const str = t.toLowerCase();
+      if (str.includes('hari') || str.includes('day') || str.includes('jam') || str.includes('hour') || str.includes('baru')) return 1;
+      if (str.includes('minggu') || str.includes('week')) {
+        const num = parseInt(str.match(/\d+/)?.[0] || '1', 10);
+        return 10 + num;
+      }
+      if (str.includes('bulan') || str.includes('month')) {
+        const num = parseInt(str.match(/\d+/)?.[0] || '1', 10);
+        return 100 + num;
+      }
+      return 1000;
+    }
+    return getWeight(a.time_ago) - getWeight(b.time_ago);
+  });
 
   if (tab === 'neg') {
     storeReviews = storeReviews.filter(r => r.is_negative || r.rating_num <= 2);
