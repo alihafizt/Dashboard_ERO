@@ -476,9 +476,15 @@
 
     <!-- Peringkat Toko Berdasarkan Rating -->
     <div class="panel" style="margin-top:20px;">
-      <div class="panel-head-row">
-        <h2><i class="ti ti-star"></i>Performa Google Review 15 Toko</h2>
-        <div class="sub" style="color:var(--text-muted); font-size:12px;">Diurutkan dari rating tertinggi</div>
+      <div class="panel-head-row" style="flex-wrap:wrap; gap:12px;">
+        <div>
+          <h2><i class="ti ti-star"></i>Performa Google Review 15 Toko</h2>
+          <div class="sub" style="color:var(--text-muted); font-size:12px;">Klik nama toko untuk melihat ulasan positif & negatif lengkap</div>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button class="export-share-btn" id="btnFilterNeedsAttention" onclick="toggleStoreAttentionFilter()"><i class="ti ti-alert-circle"></i> Perlu Perhatian Saja</button>
+          <button class="export-share-btn" onclick="copyNegativeReviewsSummary()"><i class="ti ti-copy"></i> Salin Rekap Negatif (WA)</button>
+        </div>
       </div>
       <div class="table-scroll" style="margin-top:12px;">
         <table class="store-summary-table">
@@ -488,7 +494,7 @@
               <th class="name">Nama Toko</th>
               <th>Rating Rata-rata</th>
               <th>Total Review</th>
-              <th>Pergerakan (Delta)</th>
+              <th>Penambahan Terakhir</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -501,10 +507,19 @@
 
     <!-- Feed Ulasan Terbaru -->
     <div class="panel" style="margin-top:20px;">
-      <h2><i class="ti ti-message-2"></i>Ulasan Terbaru Pelanggan</h2>
-      <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Ulasan baru yang ditarik dari seluruh store. Ulasan bintang 1-2 diberi tanda merah untuk perhatian khusus.</div>
+      <div class="panel-head-row" style="flex-wrap:wrap; gap:12px; margin-bottom:12px;">
+        <div>
+          <h2><i class="ti ti-message-2"></i>Ulasan Pelanggan</h2>
+          <div class="sub" style="color:var(--text-muted); font-size:13px;">Ulasan baru yang ditarik dari seluruh store.</div>
+        </div>
+        <div class="compare-mode-tabs" style="margin-top:0;">
+          <button class="cmp-tab active" id="tabFeedAll" onclick="setReviewFeedTab('all')">Semua Ulasan</button>
+          <button class="cmp-tab" id="tabFeedNeg" onclick="setReviewFeedTab('negative')"><span style="color:#EF4444;">👎 Negatif Saja (★1-2)</span></button>
+          <button class="cmp-tab" id="tabFeedPos" onclick="setReviewFeedTab('positive')"><span style="color:#10B981;">👍 Positif (★5)</span></button>
+        </div>
+      </div>
       <div id="revFeedContainer" class="review-feed-list">
-        <div style="text-align:center; padding:20px; color:var(--text-muted);">Memuat ulasan terbaru...</div>
+        <div style="text-align:center; padding:20px; color:var(--text-muted);">Memuat ulasan...</div>
       </div>
     </div>
   </div>
@@ -540,6 +555,27 @@
     <div id="storeModalMonthFilter" class="store-month-filter"></div>
     <div id="storeModalTargetProgress"></div>
     <div id="storeModalList"></div>
+  </div>
+</div>
+
+<!-- Modal Detail Ulasan Per Toko (Google Reviews) -->
+<div id="storeReviewModal" class="modal-overlay" style="display:none;" onclick="if(event.target===this)closeStoreReviewModal()">
+  <div class="modal-box" style="max-width:680px; max-height:85vh; display:flex; flex-direction:column;">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="storeReviewModalTitle"><i class="ti ti-building-store"></i> -</div>
+        <div class="modal-sub" id="storeReviewModalSubtitle">-</div>
+      </div>
+      <button class="modal-close" onclick="closeStoreReviewModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="compare-mode-tabs" style="margin-top:10px; margin-bottom:12px;">
+      <button class="cmp-tab active" id="modalTabAll" onclick="filterModalStoreReviews('all')">Semua Ulasan</button>
+      <button class="cmp-tab" id="modalTabNeg" onclick="filterModalStoreReviews('neg')"><span style="color:#EF4444;">👎 Negatif (★1-2)</span></button>
+      <button class="cmp-tab" id="modalTabPos" onclick="filterModalStoreReviews('pos')"><span style="color:#10B981;">👍 Positif (★4-5)</span></button>
+    </div>
+    <div id="storeReviewModalContent" class="review-feed-list" style="overflow-y:auto; flex:1; padding-right:4px;">
+      <!-- Card list -->
+    </div>
   </div>
 </div>
 

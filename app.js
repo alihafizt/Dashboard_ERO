@@ -3484,6 +3484,10 @@ function shotFixOpacity(root){
 
 let reviewStoresList = [];
 let reviewRecentLogs = [];
+let reviewFeedTab = 'all'; // 'all' | 'negative' | 'positive'
+let filterAttentionOnly = false;
+let currentModalStore = '';
+let currentModalTab = 'all'; // 'all' | 'neg' | 'pos'
 
 async function loadReviewDashboardData() {
   if (!SUPABASE_READY) {
@@ -3492,32 +3496,45 @@ async function loadReviewDashboardData() {
   }
 
   try {
-    // 1. Ambil snapshot metrik terbaru per toko
+    // 1. Ambil snapshot metrik terbaru per toko (ambil hingga 300 data untuk hitung delta)
     const { data: metricsData, error: mErr } = await sb
       .from('review_metrics')
       .select('*')
       .order('scraped_at', { ascending: false })
-      .limit(100);
+      .limit(300);
 
     if (mErr) console.error('Error fetching review metrics:', mErr);
 
-    // Ambil data terbaru per toko unik
-    const storeMap = {};
+    // Kelompokkan per toko untuk cari record terbaru & record sebelumnya (untuk delta)
+    const storeHistory = {};
     if (metricsData) {
       metricsData.forEach(item => {
-        if (!storeMap[item.store]) {
-          storeMap[item.store] = item;
-        }
+        if (!storeHistory[item.store]) storeHistory[item.store] = [];
+        storeHistory[item.store].push(item);
       });
     }
-    reviewStoresList = Object.values(storeMap);
 
-    // 2. Ambil log ulasan terbaru (50 ulasan terakhir)
+    reviewStoresList = Object.keys(storeHistory).map(storeName => {
+      const history = storeHistory[storeName];
+      const latest = history[0];
+      const prev = history[1]; // data tarikan sebelumnya
+
+      const deltaReviews = prev ? (latest.total_reviews - prev.total_reviews) : (latest.delta_reviews || 0);
+      const deltaRating = prev ? (parseFloat(latest.avg_rating) - parseFloat(prev.avg_rating)) : 0;
+
+      return {
+        ...latest,
+        delta_reviews: deltaReviews,
+        delta_rating: deltaRating
+      };
+    });
+
+    // 2. Ambil log ulasan terbaru (hingga 100 ulasan)
     const { data: logsData, error: lErr } = await sb
       .from('review_log')
       .select('*')
       .order('scraped_at', { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (lErr) console.error('Error fetching review logs:', lErr);
     reviewRecentLogs = logsData || [];
@@ -3528,10 +3545,41 @@ async function loadReviewDashboardData() {
   }
 }
 
+function setReviewFeedTab(tab) {
+  reviewFeedTab = tab;
+  ['tabFeedAll', 'tabFeedNeg', 'tabFeedPos'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('active');
+  });
+  if (tab === 'all') document.getElementById('tabFeedAll')?.classList.add('active');
+  if (tab === 'negative') document.getElementById('tabFeedNeg')?.classList.add('active');
+  if (tab === 'positive') document.getElementById('tabFeedPos')?.classList.add('active');
+  renderReviewFeed();
+}
+
+function toggleStoreAttentionFilter() {
+  filterAttentionOnly = !filterAttentionOnly;
+  const btn = document.getElementById('btnFilterNeedsAttention');
+  if (btn) {
+    if (filterAttentionOnly) {
+      btn.classList.add('active');
+      btn.style.background = '#EF4444';
+      btn.style.color = '#fff';
+      btn.innerHTML = `<i class="ti ti-check"></i> Menampilkan Toko Perhatian`;
+    } else {
+      btn.classList.remove('active');
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.innerHTML = `<i class="ti ti-alert-circle"></i> Perlu Perhatian Saja`;
+    }
+  }
+  renderReviewStoreTable();
+}
+
 function renderReviewView() {
   // KPI Metrics
   const totalReviews = reviewStoresList.reduce((acc, s) => acc + (s.total_reviews || 0), 0);
-  const totalDelta = reviewStoresList.reduce((acc, s) => acc + (s.delta_reviews || 0), 0);
+  const totalDelta = reviewStoresList.reduce((acc, s) => acc + (s.delta_reviews > 0 ? s.delta_reviews : 0), 0);
   
   const avgRatingCalc = reviewStoresList.length > 0
     ? (reviewStoresList.reduce((acc, s) => acc + parseFloat(s.avg_rating || 0), 0) / reviewStoresList.length).toFixed(2)
@@ -3552,68 +3600,195 @@ function renderReviewView() {
 
   if (elTotal) elTotal.textContent = totalReviews.toLocaleString('id-ID');
   if (elDelta) elDelta.innerHTML = totalDelta > 0 
-    ? `<span style="color:#10B981; font-weight:700;">+${totalDelta}</span> ulasan baru minggu ini`
+    ? `<span style="color:#10B981; font-weight:700;">+${totalDelta} ulasan baru</span> tarikan terakhir`
     : `Stabil (tidak ada lonjakan)`;
   if (elAvg) elAvg.textContent = avgRatingCalc;
   if (elNeg) elNeg.textContent = negativeCount;
   if (elTime) elTime.textContent = lastUpdate;
 
-  // Render Tabel Toko (Sort by Rating Descending)
+  renderReviewStoreTable();
+  renderReviewFeed();
+}
+
+function renderReviewStoreTable() {
   const tbody = document.getElementById('revStoreTableBody');
-  if (tbody) {
-    if (reviewStoresList.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada data ulasan tersimpan di Supabase. Silakan jalankan script monitor.</td></tr>`;
-    } else {
-      const sorted = [...reviewStoresList].sort((a, b) => (parseFloat(b.avg_rating) || 0) - (parseFloat(a.avg_rating) || 0));
-      tbody.innerHTML = sorted.map((s, idx) => {
-        const rating = parseFloat(s.avg_rating || 0).toFixed(1);
-        const deltaRev = s.delta_reviews || 0;
-        const deltaText = deltaRev > 0 ? `<span style="color:#10B981; font-weight:bold;">+${deltaRev}</span>` : `<span style="color:var(--text-muted);">0</span>`;
-        
-        let statusBadge = `<span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981;">Baik</span>`;
-        if (parseFloat(rating) < 4.5) {
-          statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.1); color:#EF4444;">Perlu Perhatian</span>`;
-        }
+  if (!tbody) return;
 
-        return `
-          <tr>
-            <td style="text-align:center; font-weight:700; color:var(--text-muted);">${idx + 1}</td>
-            <td class="name"><b>${escapeHtml(s.store)}</b></td>
-            <td><b style="color:#F59E0B;">★ ${rating}</b></td>
-            <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
-            <td>${deltaText}</td>
-            <td>${statusBadge}</td>
-          </tr>
-        `;
-      }).join('');
-    }
+  if (reviewStoresList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada data ulasan tersimpan di Supabase. Silakan jalankan script monitor.</td></tr>`;
+    return;
   }
 
-  // Render Feed Ulasan Terbaru
+  let list = [...reviewStoresList];
+
+  // Filter perhatian: toko rating < 4.6 atau punya review negatif di log terbaru
+  if (filterAttentionOnly) {
+    const storesWithNegative = new Set(reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2).map(r => r.store));
+    list = list.filter(s => parseFloat(s.avg_rating) < 4.6 || storesWithNegative.has(s.store));
+  }
+
+  list.sort((a, b) => (parseFloat(b.avg_rating) || 0) - (parseFloat(a.avg_rating) || 0));
+
+  tbody.innerHTML = list.map((s, idx) => {
+    const rating = parseFloat(s.avg_rating || 0).toFixed(1);
+    const deltaRev = s.delta_reviews || 0;
+    const deltaText = deltaRev > 0 
+      ? `<span style="color:#10B981; font-weight:bold; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px;">+${deltaRev}</span>` 
+      : `<span style="color:var(--text-muted);">0</span>`;
+    
+    let statusBadge = `<span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981;">Bagus</span>`;
+    if (parseFloat(rating) < 4.5) {
+      statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.1); color:#EF4444; font-weight:bold;">⚠️ Perlu Perhatian</span>`;
+    } else if (parseFloat(rating) < 4.7) {
+      statusBadge = `<span class="badge" style="background:rgba(245,158,11,0.1); color:#F59E0B;">Cukup</span>`;
+    }
+
+    return `
+      <tr style="cursor:pointer;" onclick="openStoreReviewModal('${escapeAttr(s.store)}')" title="Klik untuk lihat detail ulasan toko ini">
+        <td style="text-align:center; font-weight:700; color:var(--text-muted);">${idx + 1}</td>
+        <td class="name">
+          <b style="color:var(--brand);">${escapeHtml(s.store)}</b>
+          <span style="font-size:11px; color:var(--text-muted); margin-left:6px;"><i class="ti ti-external-link"></i> lihat ulasan</span>
+        </td>
+        <td><b style="color:#F59E0B;">★ ${rating}</b></td>
+        <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
+        <td>${deltaText}</td>
+        <td>${statusBadge}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderReviewFeed() {
   const feed = document.getElementById('revFeedContainer');
-  if (feed) {
-    if (reviewRecentLogs.length === 0) {
-      feed.innerHTML = `<div style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada ulasan yang terekam.</div>`;
-    } else {
-      feed.innerHTML = reviewRecentLogs.map(r => {
-        const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
-        const isNeg = r.is_negative || (r.rating_num <= 2);
-        const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+  if (!feed) return;
 
-        return `
-          <div class="${cardClass}">
-            <div class="review-card-header">
-              <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
-              <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
-              <span class="review-stars">${stars}</span>
-            </div>
-            <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
-          </div>
-        `;
-      }).join('');
-    }
+  let filtered = [...reviewRecentLogs];
+  if (reviewFeedTab === 'negative') {
+    filtered = filtered.filter(r => r.is_negative || r.rating_num <= 2);
+  } else if (reviewFeedTab === 'positive') {
+    filtered = filtered.filter(r => r.rating_num >= 5);
   }
+
+  if (filtered.length === 0) {
+    feed.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">Tidak ada ulasan dalam kategori ini.</div>`;
+    return;
+  }
+
+  feed.innerHTML = filtered.map(r => {
+    const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
+    const isNeg = r.is_negative || (r.rating_num <= 2);
+    const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+
+    return `
+      <div class="${cardClass}" style="cursor:pointer;" onclick="openStoreReviewModal('${escapeAttr(r.store)}')">
+        <div class="review-card-header">
+          <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
+          <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+          <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+          <span class="review-stars">${stars}</span>
+        </div>
+        <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =========================================================
+// MODAL REVIEW PER TOKO
+// =========================================================
+function openStoreReviewModal(storeName) {
+  currentModalStore = storeName;
+  currentModalTab = 'all';
+
+  const modal = document.getElementById('storeReviewModal');
+  const title = document.getElementById('storeReviewModalTitle');
+  const sub = document.getElementById('storeReviewModalSubtitle');
+
+  const storeData = reviewStoresList.find(s => s.store === storeName);
+  const rating = storeData ? `★ ${parseFloat(storeData.avg_rating).toFixed(1)} (${storeData.total_reviews} ulasan)` : '';
+
+  if (title) title.innerHTML = `<i class="ti ti-building-store"></i> ${escapeHtml(storeName)}`;
+  if (sub) sub.textContent = `Ringkasan Ulasan Google Maps · ${rating}`;
+
+  filterModalStoreReviews('all');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeStoreReviewModal() {
+  const modal = document.getElementById('storeReviewModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function filterModalStoreReviews(tab) {
+  currentModalTab = tab;
+  ['modalTabAll', 'modalTabNeg', 'modalTabPos'].forEach(id => {
+    document.getElementById(id)?.classList.remove('active');
+  });
+  if (tab === 'all') document.getElementById('modalTabAll')?.classList.add('active');
+  if (tab === 'neg') document.getElementById('modalTabNeg')?.classList.add('active');
+  if (tab === 'pos') document.getElementById('modalTabPos')?.classList.add('active');
+
+  const content = document.getElementById('storeReviewModalContent');
+  if (!content) return;
+
+  let storeReviews = reviewRecentLogs.filter(r => r.store === currentModalStore);
+
+  if (tab === 'neg') {
+    storeReviews = storeReviews.filter(r => r.is_negative || r.rating_num <= 2);
+  } else if (tab === 'pos') {
+    storeReviews = storeReviews.filter(r => r.rating_num >= 4);
+  }
+
+  if (storeReviews.length === 0) {
+    content.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">Tidak ada ulasan pada kategori ini untuk toko ${escapeHtml(currentModalStore)}.</div>`;
+    return;
+  }
+
+  content.innerHTML = storeReviews.map(r => {
+    const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
+    const isNeg = r.is_negative || (r.rating_num <= 2);
+    const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+
+    return `
+      <div class="${cardClass}">
+        <div class="review-card-header">
+          <span style="font-weight:700; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+          <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+        </div>
+        <div style="margin-bottom:6px;">
+          <span class="review-stars">${stars}</span>
+        </div>
+        <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Copy Rekap Ulasan Negatif ke Clipboard untuk WhatsApp
+function copyNegativeReviewsSummary() {
+  const negs = reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2);
+  if (negs.length === 0) {
+    alert('Tidak ada ulasan negatif terbaru.');
+    return;
+  }
+
+  let text = `📢 *REKAP KOMPLAIN GOOGLE REVIEW (${negs.length} ULASAN)*\n`;
+  text += `_Update per: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'medium' })}_\n\n`;
+
+  negs.forEach((r, i) => {
+    text += `${i + 1}. *${r.store}* (⭐${r.rating_num})\n`;
+    text += `   👤 ${r.author} (${r.time_ago})\n`;
+    text += `   💬 "${r.review_text}"\n\n`;
+  });
+
+  text += `Mohon Store Leader terkait untuk segera melakukan cross-check dan evaluasi pelayanan tim. Terima kasih! 🙏`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert('✅ Rekap ulasan negatif berhasil disalin ke clipboard! Silakan paste langsung ke grup WhatsApp.');
+  }).catch(() => {
+    prompt('Salin teks rekap berikut:', text);
+  });
 }
