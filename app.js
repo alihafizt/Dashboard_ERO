@@ -3694,8 +3694,124 @@ function renderReviewView() {
   if (elNeg) elNeg.textContent = negativeCount;
   if (elTime) elTime.textContent = lastUpdate;
 
+  renderStaffLeaderboard();
+  renderRootCauseAnalysis();
   renderReviewStoreTable();
   renderReviewFeed();
+}
+
+// 1. Leaderboard Staff yang Sering Dipuji
+function renderStaffLeaderboard() {
+  const container = document.getElementById('staffLeaderboardContainer');
+  if (!container) return;
+
+  const staffCount = {};
+  const positiveReviews = reviewRecentLogs.filter(r => (r.rating_num >= 4) && r.review_text);
+
+  // Regex mendeteksi nama setelah kata sapaan: kak/mas/mbak/bang/bu/pak/ko/ci
+  const honorificRegex = /(?:kak|mas|mbak|bang|bu|pak|ko|ci|saudara)\s+([a-zA-Z]{3,15})/gi;
+
+  positiveReviews.forEach(r => {
+    const text = r.review_text || '';
+    let match;
+    while ((match = honorificRegex.exec(text)) !== null) {
+      let name = match[1].trim().toLowerCase();
+      // Filter kata-kata umum yang bukan nama orang
+      const stopWords = ['nya', 'dan', 'yg', 'yang', 'ini', 'itu', 'juga', 'aja', 'bisa', 'sangat', 'baik', 'ramah', 'toko', 'seller', 'admin', 'kasir', 'sales'];
+      if (stopWords.includes(name)) continue;
+
+      // Format Capital Case
+      name = name.charAt(0).toUpperCase() + name.slice(1);
+      const key = `${name} (${r.store})`;
+
+      if (!staffCount[key]) {
+        staffCount[key] = { name, store: r.store, count: 0 };
+      }
+      staffCount[key].count++;
+    }
+  });
+
+  const sortedStaff = Object.values(staffCount).sort((a, b) => b.count - a.count).slice(0, 5);
+
+  if (sortedStaff.length === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:18px; color:var(--text-muted); font-size:12px;">Belum ada sebutan nama staf di ulasan bintang 5 terbaru.</div>`;
+    return;
+  }
+
+  container.innerHTML = sortedStaff.map((s, idx) => {
+    const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `${idx + 1}.`));
+    return `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--card-bg, rgba(255,255,255,0.4)); border-radius:8px; margin-bottom:6px; border:1px solid var(--border, rgba(0,0,0,0.05));">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:14px; font-weight:bold;">${medal}</span>
+          <div>
+            <b style="font-size:13px; color:var(--text);">${escapeHtml(s.name)}</b>
+            <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(s.store)}</div>
+          </div>
+        </div>
+        <span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981; font-weight:bold; font-size:11px;">
+          ${s.count}x dipuji
+        </span>
+      </div>
+    `;
+  }).join('');
+}
+
+// 2. Analisis Akar Masalah Komplain (Root Cause Tagging)
+function renderRootCauseAnalysis() {
+  const container = document.getElementById('rootCauseContainer');
+  if (!container) return;
+
+  const negativeReviews = reviewRecentLogs.filter(r => r.rating_num <= 3 || r.is_negative);
+
+  const categories = {
+    service: { label: 'Pelayanan & Sikap Staff', count: 0, color: '#EF4444', icon: 'ti-user-x', keywords: ['judes', 'cuek', 'lama', 'lambat', 'duduk', 'urak', 'buruk', 'parah', 'sombon', 'kecewa', 'zonk', 'jutek', 'tidak ramah', 'pelayanan 0'] },
+    stock: { label: 'Stok & Ketersediaan Barang', count: 0, color: '#F59E0B', icon: 'ti-package-off', keywords: ['kosong', 'habis', 'tidak ada', 'stok', 'rusak', 'inden', 'cacat', 'barang'] },
+    pricing: { label: 'Harga, Promo & Struk', count: 0, color: '#3B82F6', icon: 'ti-receipt-2', keywords: ['mahal', 'nota', 'invoice', 'struk', 'promo', 'cashback', 'harga', 'kembalian', 'garansi'] }
+  };
+
+  negativeReviews.forEach(r => {
+    const text = (r.review_text || '').toLowerCase();
+    let tagged = false;
+
+    if (categories.service.keywords.some(k => text.includes(k))) {
+      categories.service.count++;
+      tagged = true;
+    }
+    if (categories.stock.keywords.some(k => text.includes(k))) {
+      categories.stock.count++;
+      tagged = true;
+    }
+    if (categories.pricing.keywords.some(k => text.includes(k))) {
+      categories.pricing.count++;
+      tagged = true;
+    }
+
+    // Default jika bintang rendah tapi tidak ada keyword spesifik
+    if (!tagged) categories.service.count++;
+  });
+
+  const totalComplaints = categories.service.count + categories.stock.count + categories.pricing.count;
+
+  if (totalComplaints === 0) {
+    container.innerHTML = `<div style="text-align:center; padding:18px; color:#10B981; font-size:13px;"><i class="ti ti-circle-check"></i> Luar biasa! Tidak ada keluhan tercatat di ulasan terbaru.</div>`;
+    return;
+  }
+
+  container.innerHTML = Object.values(categories).map(cat => {
+    const pct = totalComplaints > 0 ? Math.round((cat.count / totalComplaints) * 100) : 0;
+    return `
+      <div style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+          <span><i class="ti ${cat.icon}" style="color:${cat.color};"></i> <b>${cat.label}</b></span>
+          <b>${cat.count} komplain (${pct}%)</b>
+        </div>
+        <div style="height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden;">
+          <div style="height:100%; width:${pct}%; background:${cat.color}; border-radius:3px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderReviewStoreTable() {
