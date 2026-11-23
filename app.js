@@ -3741,16 +3741,19 @@ function renderStaffLeaderboard() {
   container.innerHTML = sortedStaff.map((s, idx) => {
     const medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : `${idx + 1}.`));
     return `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:var(--card-bg, rgba(255,255,255,0.4)); border-radius:8px; margin-bottom:6px; border:1px solid var(--border, rgba(0,0,0,0.05));">
-        <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:14px; font-weight:bold;">${medal}</span>
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:var(--card-bg, rgba(255,255,255,0.4)); border-radius:8px; margin-bottom:6px; border:1px solid var(--border, rgba(0,0,0,0.05)); cursor:pointer; transition:transform 0.15s ease;"
+           onmouseover="this.style.transform='translateX(3px)'" onmouseout="this.style.transform='none'"
+           onclick="openStaffPraiseModal('${escapeAttr(s.name)}', '${escapeAttr(s.store)}')"
+           title="Klik untuk melihat ulasan yang memuji ${escapeAttr(s.name)}">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span style="font-size:16px; font-weight:bold;">${medal}</span>
           <div>
-            <b style="font-size:13px; color:var(--text);">${escapeHtml(s.name)}</b>
-            <div style="font-size:11px; color:var(--text-muted);">${escapeHtml(s.store)}</div>
+            <b style="font-size:13.5px; color:var(--brand);">${escapeHtml(s.name)}</b>
+            <div style="font-size:11px; color:var(--text-muted);"><i class="ti ti-building-store"></i> ${escapeHtml(s.store)}</div>
           </div>
         </div>
-        <span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981; font-weight:bold; font-size:11px;">
-          ${s.count}x dipuji
+        <span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981; font-weight:bold; font-size:11.5px;">
+          ${s.count}x dipuji <i class="ti ti-chevron-right" style="font-size:10px;"></i>
         </span>
       </div>
     `;
@@ -3765,9 +3768,9 @@ function renderRootCauseAnalysis() {
   const negativeReviews = reviewRecentLogs.filter(r => r.rating_num <= 3 || r.is_negative);
 
   const categories = {
-    service: { label: 'Pelayanan & Sikap Staff', count: 0, color: '#EF4444', icon: 'ti-user-x', keywords: ['judes', 'cuek', 'lama', 'lambat', 'duduk', 'urak', 'buruk', 'parah', 'sombon', 'kecewa', 'zonk', 'jutek', 'tidak ramah', 'pelayanan 0'] },
-    stock: { label: 'Stok & Ketersediaan Barang', count: 0, color: '#F59E0B', icon: 'ti-package-off', keywords: ['kosong', 'habis', 'tidak ada', 'stok', 'rusak', 'inden', 'cacat', 'barang'] },
-    pricing: { label: 'Harga, Promo & Struk', count: 0, color: '#3B82F6', icon: 'ti-receipt-2', keywords: ['mahal', 'nota', 'invoice', 'struk', 'promo', 'cashback', 'harga', 'kembalian', 'garansi'] }
+    service: { key: 'service', label: 'Pelayanan & Sikap Staff', count: 0, color: '#EF4444', icon: 'ti-user-x', keywords: ['judes', 'cuek', 'lama', 'lambat', 'duduk', 'urak', 'buruk', 'parah', 'sombon', 'kecewa', 'zonk', 'jutek', 'tidak ramah', 'pelayanan 0'] },
+    stock: { key: 'stock', label: 'Stok & Ketersediaan Barang', count: 0, color: '#F59E0B', icon: 'ti-package-off', keywords: ['kosong', 'habis', 'tidak ada', 'stok', 'rusak', 'inden', 'cacat', 'barang'] },
+    pricing: { key: 'pricing', label: 'Harga, Promo & Struk', count: 0, color: '#3B82F6', icon: 'ti-receipt-2', keywords: ['mahal', 'nota', 'invoice', 'struk', 'promo', 'cashback', 'harga', 'kembalian', 'garansi'] }
   };
 
   negativeReviews.forEach(r => {
@@ -3787,7 +3790,6 @@ function renderRootCauseAnalysis() {
       tagged = true;
     }
 
-    // Default jika bintang rendah tapi tidak ada keyword spesifik
     if (!tagged) categories.service.count++;
   });
 
@@ -3801,17 +3803,115 @@ function renderRootCauseAnalysis() {
   container.innerHTML = Object.values(categories).map(cat => {
     const pct = totalComplaints > 0 ? Math.round((cat.count / totalComplaints) * 100) : 0;
     return `
-      <div style="margin-bottom:10px;">
-        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
+      <div style="margin-bottom:12px; cursor:pointer; padding:8px 10px; border-radius:8px; transition:background 0.15s ease;"
+           onmouseover="this.style.background='rgba(0,0,0,0.03)'" onmouseout="this.style.background='none'"
+           onclick="openRootCauseModal('${cat.key}', '${escapeAttr(cat.label)}')"
+           title="Klik untuk melihat ulasan keluhan kategori ini">
+        <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:6px;">
           <span><i class="ti ${cat.icon}" style="color:${cat.color};"></i> <b>${cat.label}</b></span>
-          <b>${cat.count} komplain (${pct}%)</b>
+          <b style="color:${cat.color};">${cat.count} komplain (${pct}%) <i class="ti ti-chevron-right" style="font-size:11px;"></i></b>
         </div>
-        <div style="height:6px; background:rgba(0,0,0,0.06); border-radius:3px; overflow:hidden;">
-          <div style="height:100%; width:${pct}%; background:${cat.color}; border-radius:3px;"></div>
+        <div style="height:7px; background:rgba(0,0,0,0.06); border-radius:4px; overflow:hidden;">
+          <div style="height:100%; width:${pct}%; background:${cat.color}; border-radius:4px;"></div>
         </div>
       </div>
     `;
   }).join('');
+}
+
+// Modal Khusus: Lihat Ulasan Pujian untuk Staf Tertentu
+function openStaffPraiseModal(staffName, storeName) {
+  const modal = document.getElementById('insightDetailModal');
+  const title = document.getElementById('insightModalTitle');
+  const sub = document.getElementById('insightModalSubtitle');
+  const content = document.getElementById('insightModalContent');
+  if (!modal || !content) return;
+
+  if (title) title.innerHTML = `🏆 Ulasan Pujian untuk: <b style="color:var(--brand);">${escapeHtml(staffName)}</b>`;
+  if (sub) sub.innerHTML = `<i class="ti ti-building-store"></i> ${escapeHtml(storeName)} · Ulasan Bintang 5 Pelanggan`;
+
+  const sLower = staffName.toLowerCase();
+  const matched = reviewRecentLogs.filter(r => {
+    const text = (r.review_text || '').toLowerCase();
+    return text.includes(sLower);
+  });
+
+  if (matched.length === 0) {
+    content.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">Tidak ditemukan detail teks untuk staf ini.</div>`;
+  } else {
+    content.innerHTML = matched.map(r => {
+      const stars = '★'.repeat(r.rating_num || 5);
+      return `
+        <div class="review-card-item is-pos">
+          <div class="review-card-header">
+            <span style="font-weight:700; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+            <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+          </div>
+          <div style="margin-bottom:6px;">
+            <span class="review-stars">${stars}</span>
+          </div>
+          <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.style.display = 'flex';
+}
+
+// Modal Khusus: Lihat Ulasan Keluhan Berdasarkan Kategori Masalah
+function openRootCauseModal(catKey, catLabel) {
+  const modal = document.getElementById('insightDetailModal');
+  const title = document.getElementById('insightModalTitle');
+  const sub = document.getElementById('insightModalSubtitle');
+  const content = document.getElementById('insightModalContent');
+  if (!modal || !content) return;
+
+  if (title) title.innerHTML = `⚠️ Daftar Keluhan: <b style="color:#EF4444;">${escapeHtml(catLabel)}</b>`;
+  if (sub) sub.textContent = `Ditemukan pada ulasan bintang 1 - 3 dari 15 Toko Retail`;
+
+  const categories = {
+    service: ['judes', 'cuek', 'lama', 'lambat', 'duduk', 'urak', 'buruk', 'parah', 'sombon', 'kecewa', 'zonk', 'jutek', 'tidak ramah', 'pelayanan 0'],
+    stock: ['kosong', 'habis', 'tidak ada', 'stok', 'rusak', 'inden', 'cacat', 'barang'],
+    pricing: ['mahal', 'nota', 'invoice', 'struk', 'promo', 'cashback', 'harga', 'kembalian', 'garansi']
+  };
+
+  const keywords = categories[catKey] || [];
+  const negativeReviews = reviewRecentLogs.filter(r => r.rating_num <= 3 || r.is_negative);
+
+  const matched = negativeReviews.filter(r => {
+    const text = (r.review_text || '').toLowerCase();
+    if (keywords.length === 0) return true;
+    return keywords.some(k => text.includes(k));
+  });
+
+  if (matched.length === 0) {
+    content.innerHTML = `<div style="text-align:center; padding:24px; color:var(--text-muted);">Tidak ada ulasan spesifik dalam kategori ini.</div>`;
+  } else {
+    content.innerHTML = matched.map(r => {
+      const stars = '★'.repeat(r.rating_num || 1);
+      return `
+        <div class="review-card-item is-neg">
+          <div class="review-card-header">
+            <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
+            <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+            <span class="review-stars" style="color:#EF4444;">${stars}</span>
+          </div>
+          <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeInsightModal() {
+  const modal = document.getElementById('insightDetailModal');
+  if (modal) modal.style.display = 'none';
 }
 
 function renderReviewStoreTable() {
