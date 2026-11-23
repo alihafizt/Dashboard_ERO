@@ -3484,10 +3484,29 @@ function shotFixOpacity(root){
 
 let reviewStoresList = [];
 let reviewRecentLogs = [];
+let reviewWeeklySummary = { thisWeek: 0, lastWeek: 0, deltaPct: 0 };
 let reviewFeedTab = 'all'; // 'all' | 'negative' | 'positive'
 let filterAttentionOnly = false;
 let currentModalStore = '';
 let currentModalTab = 'all'; // 'all' | 'neg' | 'pos'
+
+// Fungsi bantu rentang tanggal Senin - Minggu
+function getWeekRange(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  // Dalam JS: 0=Minggu, 1=Senin. Kita ubah agar Senin = 0, Minggu = 6
+  const diffToMonday = (day === 0 ? -6 : 1) - day;
+  
+  const monday = new Date(d);
+  monday.setDate(d.getDate() + diffToMonday);
+  monday.setHours(0, 0, 0, 0);
+
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  sunday.setHours(23, 59, 59, 999);
+
+  return { start: monday, end: sunday };
+}
 
 async function loadReviewDashboardData() {
   if (!SUPABASE_READY) {
@@ -3496,16 +3515,24 @@ async function loadReviewDashboardData() {
   }
 
   try {
-    // 1. Ambil snapshot metrik terbaru per toko (ambil hingga 300 data untuk hitung delta)
+    // 1. Ambil snapshot metrik terbaru per toko (ambil hingga 500 data untuk hitung week-over-week)
     const { data: metricsData, error: mErr } = await sb
       .from('review_metrics')
       .select('*')
       .order('scraped_at', { ascending: false })
-      .limit(300);
+      .limit(500);
 
     if (mErr) console.error('Error fetching review metrics:', mErr);
 
-    // Kelompokkan per toko untuk cari record terbaru & record sebelumnya (untuk delta)
+    // Hitung periode Senin - Minggu untuk Week Ini dan Week Lalu
+    const now = new Date();
+    const thisWeek = getWeekRange(now);
+    
+    const lastWeekRef = new Date(thisWeek.start);
+    lastWeekRef.setDate(lastWeekRef.getDate() - 2); // ambil hari di minggu lalu
+    const lastWeek = getWeekRange(lastWeekRef);
+
+    // Kelompokkan per toko
     const storeHistory = {};
     if (metricsData) {
       metricsData.forEach(item => {
@@ -3514,20 +3541,68 @@ async function loadReviewDashboardData() {
       });
     }
 
+    let totalThisWeekAll = 0;
+    let totalLastWeekAll = 0;
+
     reviewStoresList = Object.keys(storeHistory).map(storeName => {
-      const history = storeHistory[storeName];
+      const history = storeHistory[storeName]; // urut dari scraped_at desc
       const latest = history[0];
       const prev = history[1]; // data tarikan sebelumnya
 
       const deltaReviews = prev ? (latest.total_reviews - prev.total_reviews) : (latest.delta_reviews || 0);
       const deltaRating = prev ? (parseFloat(latest.avg_rating) - parseFloat(prev.avg_rating)) : 0;
 
+      // Hitung delta minggu ini (dari awal Senin minggu ini s/d sekarang)
+      // cari record tertua di minggu ini dan record sebelum minggu ini
+      const thisWeekRecords = history.filter(h => {
+        const d = new Date(h.scraped_at);
+        return d >= thisWeek.start && d <= thisWeek.end;
+      });
+
+      const lastWeekRecords = history.filter(h => {
+        const d = new Date(h.scraped_at);
+        return d >= lastWeek.start && d <= lastWeek.end;
+      });
+
+      const beforeThisWeekRecord = history.find(h => new Date(h.scraped_at) < thisWeek.start);
+      const beforeLastWeekRecord = history.find(h => new Date(h.scraped_at) < lastWeek.start);
+
+      let storeDeltaThisWeek = 0;
+      if (thisWeekRecords.length > 0) {
+        const latestInThisWeek = thisWeekRecords[0].total_reviews;
+        const baselineThisWeek = beforeThisWeekRecord ? beforeThisWeekRecord.total_reviews : thisWeekRecords[thisWeekRecords.length - 1].total_reviews;
+        storeDeltaThisWeek = Math.max(0, latestInThisWeek - baselineThisWeek);
+      }
+
+      let storeDeltaLastWeek = 0;
+      if (lastWeekRecords.length > 0) {
+        const latestInLastWeek = lastWeekRecords[0].total_reviews;
+        const baselineLastWeek = beforeLastWeekRecord ? beforeLastWeekRecord.total_reviews : lastWeekRecords[lastWeekRecords.length - 1].total_reviews;
+        storeDeltaLastWeek = Math.max(0, latestInLastWeek - baselineLastWeek);
+      }
+
+      totalThisWeekAll += storeDeltaThisWeek;
+      totalLastWeekAll += storeDeltaLastWeek;
+
       return {
         ...latest,
         delta_reviews: deltaReviews,
-        delta_rating: deltaRating
+        delta_rating: deltaRating,
+        delta_this_week: storeDeltaThisWeek,
+        delta_last_week: storeDeltaLastWeek
       };
     });
+
+    // Simpan ringkasan mingguan
+    let pctGrowth = 0;
+    if (totalLastWeekAll > 0) {
+      pctGrowth = Math.round(((totalThisWeekAll - totalLastWeekAll) / totalLastWeekAll) * 100);
+    }
+    reviewWeeklySummary = {
+      thisWeek: totalThisWeekAll,
+      lastWeek: totalLastWeekAll,
+      deltaPct: pctGrowth
+    };
 
     // 2. Ambil log ulasan terbaru (hingga 100 ulasan)
     const { data: logsData, error: lErr } = await sb
@@ -3594,6 +3669,8 @@ function renderReviewView() {
   // Update KPI UI
   const elTotal = document.getElementById('revStatTotalReviews');
   const elDelta = document.getElementById('revStatDeltaReviews');
+  const elWeekComp = document.getElementById('revStatWeekComp');
+  const elWeekDelta = document.getElementById('revStatWeekDelta');
   const elAvg = document.getElementById('revStatAvgRating');
   const elNeg = document.getElementById('revStatNegativeCount');
   const elTime = document.getElementById('revStatLastUpdate');
@@ -3602,6 +3679,17 @@ function renderReviewView() {
   if (elDelta) elDelta.innerHTML = totalDelta > 0 
     ? `<span style="color:#10B981; font-weight:700;">+${totalDelta} ulasan baru</span> tarikan terakhir`
     : `Stabil (tidak ada lonjakan)`;
+
+  if (elWeekComp) {
+    elWeekComp.innerHTML = `<span style="color:#10B981;">+${reviewWeeklySummary.thisWeek}</span> <span style="font-size:16px; color:var(--text-muted); font-weight:500;">vs</span> +${reviewWeeklySummary.lastWeek}`;
+  }
+  if (elWeekDelta) {
+    const pct = reviewWeeklySummary.deltaPct;
+    const badgeColor = pct >= 0 ? '#10B981' : '#EF4444';
+    const arrow = pct >= 0 ? '▲' : '▼';
+    elWeekDelta.innerHTML = `<span style="color:${badgeColor}; font-weight:bold;">${arrow} ${Math.abs(pct)}%</span> dibanding week lalu (Sen - Min)`;
+  }
+
   if (elAvg) elAvg.textContent = avgRatingCalc;
   if (elNeg) elNeg.textContent = negativeCount;
   if (elTime) elTime.textContent = lastUpdate;
@@ -3631,9 +3719,15 @@ function renderReviewStoreTable() {
 
   tbody.innerHTML = list.map((s, idx) => {
     const rating = parseFloat(s.avg_rating || 0).toFixed(1);
-    const deltaRev = s.delta_reviews || 0;
-    const deltaText = deltaRev > 0 
-      ? `<span style="color:#10B981; font-weight:bold; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px;">+${deltaRev}</span>` 
+    const thisW = s.delta_this_week || 0;
+    const lastW = s.delta_last_week || 0;
+
+    const thisWText = thisW > 0 
+      ? `<span style="color:#10B981; font-weight:bold; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px;">+${thisW}</span>` 
+      : `<span style="color:var(--text-muted);">0</span>`;
+
+    const lastWText = lastW > 0 
+      ? `<span style="color:#3B82F6; font-weight:bold; background:rgba(59,130,246,0.1); padding:2px 6px; border-radius:6px;">+${lastW}</span>` 
       : `<span style="color:var(--text-muted);">0</span>`;
     
     let statusBadge = `<span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981;">Bagus</span>`;
@@ -3652,7 +3746,8 @@ function renderReviewStoreTable() {
         </td>
         <td><b style="color:#F59E0B;">★ ${rating}</b></td>
         <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
-        <td>${deltaText}</td>
+        <td>${thisWText}</td>
+        <td>${lastWText}</td>
         <td>${statusBadge}</td>
       </tr>
     `;
