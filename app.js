@@ -8,6 +8,7 @@ function toggleTheme() {
   htmlEl.setAttribute('data-theme', newTheme);
   localStorage.setItem('dashboard-theme', newTheme);
   updateThemeIcon(newTheme);
+  if (typeof redrawV5Charts === 'function') redrawV5Charts();
 }
 function updateThemeIcon(theme) {
   // Pakai SVG inline (bukan font-icon eksternal) supaya ikon tombol tema
@@ -113,6 +114,10 @@ function switchView(view){
   document.querySelectorAll('.view-section').forEach(sec=>sec.classList.toggle('active',sec.dataset.viewSection===view));
   window.scrollTo({top:0,behavior:'instant'});
   if(view==='compare') renderCompareView();
+  if(view==='stores') {
+    if(!reviewStoresList.length) loadReviewDashboardData();
+    else if(typeof renderStoreHealthMatrix==='function') renderStoreHealthMatrix();
+  }
   if(view==='reviews') loadReviewDashboardData();
 }
 async function loadAdminState(){
@@ -770,8 +775,9 @@ function renderDashboardCharts(activeRows){
   const dsv = getDashboardDataset();
   if(dsv.archive) activeRows = dsv.active;
   const chrono = [...historyData].sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const brandColor = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim() || '#1D4ED8';
   const trendHtml = chrono.length>=2
-    ? buildLineChartSvg(chrono.map(h=>h.label), [{name:'Rata-rata Poin', color:'#F5B400', values: chrono.map(h=>h.avg)}], {height:210})
+    ? buildLineChartSvg(chrono.map(h=>h.label), [{name:'Rata-rata Poin', color:brandColor, values: chrono.map(h=>h.avg)}], {height:210})
     : '<div class="empty"><i class="ti ti-chart-line"></i>Belum cukup snapshot untuk menampilkan tren. Simpan snapshot harian untuk mulai melacak.</div>';
   const counts = {}; GRADE_ORDER.forEach(g=>counts[g]=0);
   (activeRows||[]).forEach(r=>{ const g=calcGrade(r.total); if(counts[g]!==undefined) counts[g]++; });
@@ -784,8 +790,10 @@ function renderDashboardCharts(activeRows){
     </div>`).join('')}</div>`;
   el.innerHTML = `<div class="chart-grid-2">
     <div><div class="chart-subtitle">Tren Rata-rata Poin (semua snapshot)</div>${trendHtml}</div>
-    <div><div class="chart-subtitle">Distribusi Grade ERO Aktif${dsv.archive?' — '+escapeHtml(monthLabel(dsv.month)):''}</div>${gradeBarsHtml}</div>
-  </div>`;
+    <div><div class="chart-subtitle">Radar 6 Pilar KPI Area (% terhadap target)</div><div class="chart-canvas-box" style="height:220px;"><canvas id="eroPillarRadarCanvas"></canvas></div></div>
+  </div>
+  <div style="margin-top:16px;"><div class="chart-subtitle">Distribusi Grade ERO Aktif${dsv.archive?' — '+escapeHtml(monthLabel(dsv.month)):''}</div>${gradeBarsHtml}</div>`;
+  if (typeof renderEroPillarRadarChart === 'function') renderEroPillarRadarChart(activeRows || []);
 }
 
 function buildTargetProgressHtml(r){
@@ -1290,6 +1298,7 @@ async function exportStorePerformanceImage(){
 function renderStoreScore(storeRows){
   const el=document.getElementById('storeScoreGrid'); if(!el)return; if(!storeRows.length){el.innerHTML='<div class="empty">Belum ada data store.</div>';return;}
   el.innerHTML=storeRows.map(s=>{const score=Math.max(0,Math.min(100,s.avg*10)); const goodPlus=(s.Perfect+s.Good)/s.count*100; return `<div class="score-card" data-store="${escapeAttr(s.store)}" onclick="openStoreModal(this.dataset.store)"><div class="score-head"><div class="score-name clickable-name">${escapeHtml(s.store)}</div><div class="score-value">${score.toFixed(0)}</div></div><div class="score-bar"><span style="width:${score}%"></span></div><div class="score-meta"><span>Avg ${s.avg.toFixed(2)}</span><span>Good+ ${goodPlus.toFixed(0)}%</span></div><div class="score-hint"><i class="ti ti-eye"></i>Lihat detail ERO</div></div>`;}).join('');
+  if (typeof renderStoreHealthMatrix === 'function') renderStoreHealthMatrix(storeRows);
 }
 function renderMoversPanel(){
   const el=document.getElementById('moversPanel'); if(!el)return; const h=getFilteredHistory(); if(h.length<2){el.innerHTML='<div class="empty">Minimal 2 snapshot diperlukan.</div>';return;}
@@ -1953,7 +1962,10 @@ async function bootApp(){
   await loadAdminState();
   if(SUPABASE_READY){sb.auth.onAuthStateChange((_event,session)=>{currentUser=session?.user||null;isAdmin=false;verifyAdmin(currentUser);});}
   await loadData();await loadHistory();
-  if(SUPABASE_READY)setInterval(async()=>{if(!document.hidden&&!isAdmin)await loadData();},30000);
+  if(SUPABASE_READY) {
+    loadReviewDashboardData();
+    setInterval(async()=>{if(!document.hidden&&!isAdmin)await loadData();},30000);
+  }
   initAutoLogoutWatcher();
 }
 document.addEventListener('DOMContentLoaded',()=>{ const d=new Date(); d.setMonth(d.getMonth()-1); const m=document.getElementById('archiveMonth'); if(m)m.value=d.toISOString().slice(0,7); updateUploadModeUI(); });
@@ -3674,18 +3686,20 @@ function renderReviewView() {
   const elAvg = document.getElementById('revStatAvgRating');
   const elNeg = document.getElementById('revStatNegativeCount');
   const elTime = document.getElementById('revStatLastUpdate');
+  const sideBadge = document.getElementById('sidebarNegReviewBadge');
+  const targetInput = document.getElementById('revWeeklyTargetInput');
 
   if (elTotal) elTotal.textContent = totalReviews.toLocaleString('id-ID');
   if (elDelta) elDelta.innerHTML = totalDelta > 0 
-    ? `<span style="color:#10B981; font-weight:700;">+${totalDelta} ulasan baru</span> tarikan terakhir`
+    ? `<span style="color:var(--success); font-weight:700;">+${totalDelta} ulasan baru</span> tarikan terakhir`
     : `Stabil (tidak ada lonjakan)`;
 
   if (elWeekComp) {
-    elWeekComp.innerHTML = `<span style="color:#10B981;">+${reviewWeeklySummary.thisWeek}</span> <span style="font-size:16px; color:var(--text-muted); font-weight:500;">vs</span> +${reviewWeeklySummary.lastWeek}`;
+    elWeekComp.innerHTML = `<span style="color:var(--success);">+${reviewWeeklySummary.thisWeek}</span> <span style="font-size:16px; color:var(--text-muted); font-weight:500;">vs</span> +${reviewWeeklySummary.lastWeek}`;
   }
   if (elWeekDelta) {
     const pct = reviewWeeklySummary.deltaPct;
-    const badgeColor = pct >= 0 ? '#10B981' : '#EF4444';
+    const badgeColor = pct >= 0 ? 'var(--success)' : 'var(--danger)';
     const arrow = pct >= 0 ? '▲' : '▼';
     elWeekDelta.innerHTML = `<span style="color:${badgeColor}; font-weight:bold;">${arrow} ${Math.abs(pct)}%</span> dibanding week lalu (Sen - Min)`;
   }
@@ -3693,11 +3707,22 @@ function renderReviewView() {
   if (elAvg) elAvg.textContent = avgRatingCalc;
   if (elNeg) elNeg.textContent = negativeCount;
   if (elTime) elTime.textContent = lastUpdate;
+  if (sideBadge) {
+    if (negativeCount > 0) {
+      sideBadge.style.display = 'inline-block';
+      sideBadge.textContent = `${negativeCount} Neg`;
+    } else {
+      sideBadge.style.display = 'none';
+    }
+  }
+  if (targetInput) targetInput.value = reviewWeeklyTarget;
 
   renderStaffLeaderboard();
   renderRootCauseAnalysis();
   renderReviewStoreTable();
   renderReviewFeed();
+  if (typeof renderReviewCharts === 'function') renderReviewCharts();
+  if (typeof renderStoreHealthMatrix === 'function') renderStoreHealthMatrix();
 }
 
 // 1. Leaderboard Staff yang Sering Dipuji
@@ -3914,18 +3939,361 @@ function closeInsightModal() {
   if (modal) modal.style.display = 'none';
 }
 
+// =========================================================
+// V5 PRODUCTIVITY STATE, TOAST, CHARTS & SOP HELPERS
+// =========================================================
+let reviewWeeklyTarget = Math.max(1, parseInt(localStorage.getItem('revWeeklyTarget') || '5', 10));
+let reviewClusterFilter = 'all';
+window._v5Charts = window._v5Charts || {};
+window._sopReviewCache = [];
+
+function showAppToast(msg, isErr = false) {
+  const el = document.getElementById('appToast');
+  if (!el) return;
+  el.className = 'app-toast show' + (isErr ? ' err' : '');
+  el.innerHTML = `<i class="ti ${isErr ? 'ti-alert-circle' : 'ti-circle-check'}" style="font-size:16px; color:${isErr ? '#FCA5A5' : '#34D399'};"></i><span>${escapeHtml(msg)}</span>`;
+  clearTimeout(window._appToastTimer);
+  window._appToastTimer = setTimeout(() => { el.classList.remove('show'); }, 2800);
+}
+
+function copyToClipboardWithToast(text, successMsg) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showAppToast(successMsg)).catch(() => prompt('Salin teks berikut:', text));
+  } else {
+    prompt('Salin teks berikut:', text);
+  }
+}
+
+function getStoreMeta(storeName) {
+  const n = String(storeName || '').toLowerCase();
+  const isMall = n.includes('mog') || n.includes('olympic') || n.includes('lippo') || n.includes('araya');
+  const isBlitar = n.includes('blitar') || n.includes('kesamben') || n.includes('wlingi');
+  return { cluster: isMall ? 'mall' : 'street', area: isBlitar ? 'blitar' : 'malang' };
+}
+
+function setReviewClusterFilter(cluster) {
+  reviewClusterFilter = cluster;
+  document.querySelectorAll('#revClusterPills .rev-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.cluster === cluster);
+  });
+  renderReviewStoreTable();
+}
+
+function updateReviewWeeklyTarget(val) {
+  reviewWeeklyTarget = Math.max(1, parseInt(val || '5', 10));
+  localStorage.setItem('revWeeklyTarget', String(reviewWeeklyTarget));
+  renderReviewStoreTable();
+  showAppToast(`Target review mingguan diperbarui menjadi ${reviewWeeklyTarget} ulasan/toko.`);
+}
+
+function detectStaffInText(text) {
+  const regex = /(?:kak|mas|mbak|bang|bu|pak|ko|ci|saudara)\s+([a-zA-Z]{3,15})/i;
+  const m = String(text || '').match(regex);
+  if (!m) return '';
+  const stopWords = ['nya', 'dan', 'yg', 'yang', 'ini', 'itu', 'juga', 'aja', 'bisa', 'sangat', 'baik', 'ramah', 'toko', 'seller', 'admin', 'kasir', 'sales'];
+  const word = m[1].trim().toLowerCase();
+  if (stopWords.includes(word)) return '';
+  const raw = m[0].trim();
+  return raw.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+}
+
+function buildSopReviewReply(r) {
+  const author = (r.author || 'Pelanggan').trim();
+  const store = (r.store || 'toko kami').trim();
+  const rating = Number(r.rating_num || 5);
+  if (rating <= 2 || r.is_negative) {
+    return `Halo Kak ${author}, kami memohon maaf sebesar-besarnya atas pengalaman yang kurang berkenan di ${store}. Masukan Kakak sangat berharga bagi evaluasi pelayanan tim kami. Mohon kesediaannya menghubungi Store Leader kami di toko agar kendala ini dapat segera kami tindak lanjuti. Terima kasih.`;
+  }
+  const staffMention = detectStaffInText(r.review_text || '');
+  const staffLine = staffMention ? ` Apresiasi Kakak juga sudah kami sampaikan kepada ${staffMention} dan tim.` : '';
+  return `Terima kasih banyak Kak ${author} atas ulasan bintang ${rating}-nya untuk ${store}!${staffLine} Kami senang bisa melayani kebutuhan gadget & aksesoris resmi Kakak. Ditunggu kunjungan berikutnya ya!`;
+}
+
+function cacheSopReview(r) {
+  const idx = window._sopReviewCache.length;
+  window._sopReviewCache.push(r);
+  return idx;
+}
+
+function copySopReplyByCache(idx, evt) {
+  if (evt) evt.stopPropagation();
+  const r = window._sopReviewCache[idx];
+  if (!r) return;
+  const draft = buildSopReviewReply(r);
+  const label = (r.is_negative || Number(r.rating_num) <= 2) ? 'Komplain' : 'Apresiasi';
+  copyToClipboardWithToast(draft, `Draft balasan SOP (${label}) berhasil disalin!`);
+}
+
+function getV5ChartTheme() {
+  const st = getComputedStyle(document.documentElement);
+  const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    brand: st.getPropertyValue('--brand').trim() || '#1D4ED8',
+    ink: st.getPropertyValue('--ink').trim() || (dark ? '#F8FAFC' : '#0F172A'),
+    muted: st.getPropertyValue('--text-muted').trim() || '#64748B',
+    line: st.getPropertyValue('--line').trim() || (dark ? '#1F2937' : '#E2E8F0'),
+    success: st.getPropertyValue('--success').trim() || '#059669',
+    warn: st.getPropertyValue('--warning').trim() || '#D97706',
+    danger: st.getPropertyValue('--danger').trim() || '#DC2626',
+    dark
+  };
+}
+
+function destroyV5Chart(key) {
+  if (window._v5Charts[key] && typeof window._v5Charts[key].destroy === 'function') {
+    window._v5Charts[key].destroy();
+    delete window._v5Charts[key];
+  }
+}
+
+function redrawV5Charts() {
+  try {
+    const dsv = typeof getDashboardDataset === 'function' ? getDashboardDataset() : { archive: false };
+    const active = dsv.archive ? dsv.active : (rows || []).map(r => ({ ...r, total: calcTotal(r) })).filter(isActive);
+    renderDashboardCharts(active);
+    if (typeof renderReviewCharts === 'function') renderReviewCharts();
+    if (typeof renderStoreHealthMatrix === 'function') renderStoreHealthMatrix();
+  } catch (e) { console.warn('Redraw chart skipped:', e); }
+}
+
+function renderEroPillarRadarChart(activeRows) {
+  const canvas = document.getElementById('eroPillarRadarCanvas');
+  if (!canvas) return;
+  destroyV5Chart('eroRadar');
+  const list = activeRows || [];
+  const labels = ['Device', 'Acc', 'Operator', 'Boltech', 'AR Acc', 'AR Boltech'];
+  const keys = ['device', 'acc', 'operator', 'boltech', 'arAcc', 'arBoltech'];
+  const vals = keys.map(k => {
+    const ratios = list.map(r => parseFloat(r.est?.[k])).filter(v => isFinite(v) && v >= 0);
+    if (ratios.length > 0) return Math.round((ratios.reduce((a, b) => a + b, 0) / ratios.length) * 100);
+    const rawPts = list.map(r => parseFloat(r[k])).filter(v => isFinite(v));
+    if (rawPts.length > 0) return Math.min(100, Math.round((rawPts.reduce((a, b) => a + b, 0) / rawPts.length) * 50));
+    return 0;
+  });
+
+  const t = getV5ChartTheme();
+  if (typeof Chart === 'undefined') return;
+  window._v5Charts.eroRadar = new Chart(canvas, {
+    type: 'radar',
+    data: {
+      labels,
+      datasets: [{
+        label: '% Pencapaian Area',
+        data: vals,
+        backgroundColor: t.dark ? 'rgba(59, 130, 246, 0.22)' : 'rgba(29, 78, 216, 0.18)',
+        borderColor: t.brand,
+        borderWidth: 2,
+        pointBackgroundColor: t.brand,
+        pointBorderColor: '#fff',
+        pointRadius: 3.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        r: {
+          beginAtZero: true,
+          suggestedMax: 110,
+          ticks: { display: false, stepSize: 25 },
+          grid: { color: t.line },
+          angleLines: { color: t.line },
+          pointLabels: { color: t.ink, font: { size: 11, weight: '600' } }
+        }
+      }
+    }
+  });
+}
+
+function renderReviewCharts() {
+  const velCanvas = document.getElementById('revVelocityCanvas');
+  const sentCanvas = document.getElementById('revSentimentCanvas');
+  if (!velCanvas || !sentCanvas || typeof Chart === 'undefined') return;
+
+  const t = getV5ChartTheme();
+  destroyV5Chart('revVelocity');
+  destroyV5Chart('revSentiment');
+
+  const topStores = [...reviewStoresList]
+    .sort((a, b) => (b.delta_this_week || 0) - (a.delta_this_week || 0) || (b.delta_last_week || 0) - (a.delta_last_week || 0))
+    .slice(0, 8);
+
+  const shortName = s => String(s || '').replace(/ERAFONE |Erafone |Authorized Store |Megastore Ruko |& More /g, '').split(' ').slice(0, 2).join(' ');
+
+  window._v5Charts.revVelocity = new Chart(velCanvas, {
+    type: 'bar',
+    data: {
+      labels: topStores.map(s => shortName(s.store)),
+      datasets: [
+        { label: 'Week Ini', data: topStores.map(s => s.delta_this_week || 0), backgroundColor: t.brand, borderRadius: 4 },
+        { label: 'Week Lalu', data: topStores.map(s => s.delta_last_week || 0), backgroundColor: t.dark ? '#334155' : '#CBD5E1', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: t.ink, boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: t.muted, font: { size: 10.5 } } },
+        y: { beginAtZero: true, grid: { color: t.line }, ticks: { color: t.muted, precision: 0, font: { size: 10.5 } } }
+      }
+    }
+  });
+
+  let pos = 0, neu = 0, neg = 0;
+  reviewRecentLogs.forEach(r => {
+    const n = Number(r.rating_num || 5);
+    if (r.is_negative || n <= 2) neg++;
+    else if (n >= 5) pos++;
+    else neu++;
+  });
+
+  window._v5Charts.revSentiment = new Chart(sentCanvas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Positif (★5)', 'Netral (★3-4)', 'Negatif (★1-2)'],
+      datasets: [{
+        data: [pos, neu, neg],
+        backgroundColor: [t.success, t.warn, t.danger],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '64%',
+      plugins: {
+        legend: { position: 'right', labels: { color: t.ink, boxWidth: 12, padding: 14, font: { size: 11.5 } } }
+      }
+    }
+  });
+}
+
+function matchEroAndReviewStore(eroStoreName, reviewList) {
+  const e = String(eroStoreName || '').toLowerCase();
+  if (!e || !reviewList.length) return null;
+  const exact = reviewList.find(r => String(r.store || '').toLowerCase() === e);
+  if (exact) return exact;
+  if (e.includes('xiaomi')) return reviewList.find(r => r.store.toLowerCase().includes('xiaomi')) || null;
+  const tokens = ['kepanjen', 'turen', 'dampit', 'kesamben', 'wlingi', 'ruko blitar', 'lippo', 'batu', 'tlogomas', 'soekarno', 'soehat', 'araya', 'wendit', 'sawojajar', 'tumenggung', 'olympic', 'mog'];
+  for (const tk of tokens) {
+    if (e.includes(tk)) {
+      const m = reviewList.find(r => {
+        const rs = r.store.toLowerCase();
+        if (tk === 'mog' && rs.includes('xiaomi') && !e.includes('xiaomi')) return false;
+        return rs.includes(tk === 'soehat' ? 'soekarno' : tk);
+      });
+      if (m) return m;
+    }
+  }
+  return null;
+}
+
+function renderStoreHealthMatrix(storeRowsInput) {
+  const canvas = document.getElementById('storeHealthMatrixCanvas');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  let storeRows = storeRowsInput;
+  if (!storeRows) {
+    const active = (rows || []).filter(isActive).map(r => ({ ...r, total: calcTotal(r) }));
+    const map = {};
+    active.forEach(r => {
+      const s = r.store || '(Tanpa Store)';
+      if (!map[s]) map[s] = { store: s, count: 0, sum: 0 };
+      map[s].count++; map[s].sum += r.total;
+    });
+    storeRows = Object.values(map).map(m => ({ store: m.store, count: m.count, avg: m.sum / m.count }));
+  }
+
+  const pts = [];
+  storeRows.forEach(s => {
+    const rev = matchEroAndReviewStore(s.store, reviewStoresList);
+    if (!rev) return;
+    const rating = parseFloat(rev.avg_rating || 0);
+    if (!(rating > 0)) return;
+    pts.push({
+      x: Number(s.avg.toFixed(2)),
+      y: Number(rating.toFixed(2)),
+      eroStore: s.store,
+      revStore: rev.store,
+      totalReviews: rev.total_reviews || 0
+    });
+  });
+
+  destroyV5Chart('storeMatrix');
+  const t = getV5ChartTheme();
+
+  window._v5Charts.storeMatrix = new Chart(canvas, {
+    type: 'scatter',
+    data: {
+      datasets: [{
+        label: 'Store (Poin ERO vs Rating Maps)',
+        data: pts,
+        pointRadius: 7,
+        pointHoverRadius: 9,
+        backgroundColor: ctx => {
+          const p = ctx.raw;
+          if (!p) return t.brand;
+          if (p.x >= 8.0 && p.y >= 4.7) return t.success;
+          if (p.x >= 8.0 && p.y < 4.7) return t.warn;
+          if (p.x < 8.0 && p.y < 4.7) return t.danger;
+          return t.brand;
+        },
+        borderColor: '#FFFFFF',
+        borderWidth: 1.5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (_evt, elems) => {
+        if (!elems.length) return;
+        const p = pts[elems[0].index];
+        if (p) openStoreModal(p.eroStore);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const p = ctx.raw;
+              return `${p.eroStore}: ERO ${p.x} pts | Maps ★ ${p.y} (${p.totalReviews} rev)`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'Rata-rata Poin ERO Toko', color: t.muted, font: { size: 11 } }, grid: { color: t.line }, ticks: { color: t.muted } },
+        y: { title: { display: true, text: 'Rating Google Maps (★)', color: t.muted, font: { size: 11 } }, min: 4.0, max: 5.05, grid: { color: t.line }, ticks: { color: t.muted } }
+      }
+    }
+  });
+}
+
 function renderReviewStoreTable() {
   const tbody = document.getElementById('revStoreTableBody');
   if (!tbody) return;
 
   if (reviewStoresList.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada data ulasan tersimpan di Supabase. Silakan jalankan script monitor.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Belum ada data ulasan tersimpan di Supabase. Silakan jalankan script monitor.</td></tr>`;
     return;
   }
 
   let list = [...reviewStoresList];
 
-  // Filter perhatian: toko rating < 4.6 atau punya review negatif di log terbaru
+  if (reviewClusterFilter !== 'all') {
+    list = list.filter(s => {
+      const m = getStoreMeta(s.store);
+      if (reviewClusterFilter === 'mall' || reviewClusterFilter === 'street') return m.cluster === reviewClusterFilter;
+      if (reviewClusterFilter === 'malang' || reviewClusterFilter === 'blitar') return m.area === reviewClusterFilter;
+      return true;
+    });
+  }
+
+  const q = (document.getElementById('revStoreSearch')?.value || '').trim().toLowerCase();
+  if (q) list = list.filter(s => String(s.store || '').toLowerCase().includes(q));
+
   if (filterAttentionOnly) {
     const storesWithNegative = new Set(reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2).map(r => r.store));
     list = list.filter(s => parseFloat(s.avg_rating) < 4.6 || storesWithNegative.has(s.store));
@@ -3933,24 +4301,39 @@ function renderReviewStoreTable() {
 
   list.sort((a, b) => (parseFloat(b.avg_rating) || 0) - (parseFloat(a.avg_rating) || 0));
 
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:var(--text-muted);">Tidak ada toko sesuai filter saat ini.</td></tr>`;
+    return;
+  }
+
   tbody.innerHTML = list.map((s, idx) => {
     const rating = parseFloat(s.avg_rating || 0).toFixed(1);
     const thisW = s.delta_this_week || 0;
     const lastW = s.delta_last_week || 0;
+    const pct = Math.min(100, Math.round((thisW / reviewWeeklyTarget) * 100));
+    const barCol = pct >= 100 ? 'var(--success)' : pct >= 50 ? 'var(--brand)' : 'var(--warning)';
 
-    const thisWText = thisW > 0 
-      ? `<span style="color:#10B981; font-weight:bold; background:rgba(16,185,129,0.1); padding:2px 6px; border-radius:6px;">+${thisW}</span>` 
-      : `<span style="color:var(--text-muted);">0</span>`;
+    const targetCell = `
+      <div class="rev-target-cell">
+        <div class="rev-target-meta">
+          <b style="color:${thisW > 0 ? barCol : 'var(--text-muted)'};">+${thisW}/${reviewWeeklyTarget}</b>
+          <span style="color:var(--text-muted);">${pct}%</span>
+        </div>
+        <div class="rev-target-track">
+          <div class="rev-target-fill" style="width:${pct}%; background:${barCol};"></div>
+        </div>
+      </div>
+    `;
 
     const lastWText = lastW > 0 
-      ? `<span style="color:#3B82F6; font-weight:bold; background:rgba(59,130,246,0.1); padding:2px 6px; border-radius:6px;">+${lastW}</span>` 
+      ? `<span style="color:var(--brand); font-weight:bold; background:var(--brand-light); padding:2px 6px; border-radius:6px;">+${lastW}</span>` 
       : `<span style="color:var(--text-muted);">0</span>`;
     
-    let statusBadge = `<span class="badge" style="background:rgba(16,185,129,0.1); color:#10B981;">Bagus</span>`;
+    let statusBadge = `<span class="badge" style="background:rgba(5,150,105,0.12); color:var(--success);">Bagus</span>`;
     if (parseFloat(rating) < 4.5) {
-      statusBadge = `<span class="badge" style="background:rgba(239,68,68,0.1); color:#EF4444; font-weight:bold;">⚠️ Perlu Perhatian</span>`;
+      statusBadge = `<span class="badge" style="background:rgba(220,38,38,0.12); color:var(--danger); font-weight:bold;"><i class="ti ti-alert-triangle"></i> Perlu Perhatian</span>`;
     } else if (parseFloat(rating) < 4.7) {
-      statusBadge = `<span class="badge" style="background:rgba(245,158,11,0.1); color:#F59E0B;">Cukup</span>`;
+      statusBadge = `<span class="badge" style="background:rgba(217,119,6,0.12); color:var(--warning);">Cukup</span>`;
     }
 
     return `
@@ -3960,9 +4343,9 @@ function renderReviewStoreTable() {
           <b style="color:var(--brand);">${escapeHtml(s.store)}</b>
           <span style="font-size:11px; color:var(--text-muted); margin-left:6px;"><i class="ti ti-external-link"></i> lihat ulasan</span>
         </td>
-        <td><b style="color:#F59E0B;">★ ${rating}</b></td>
+        <td><b style="color:#D97706;">★ ${rating}</b></td>
         <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
-        <td>${thisWText}</td>
+        <td>${targetCell}</td>
         <td>${lastWText}</td>
         <td>${statusBadge}</td>
       </tr>
@@ -3973,6 +4356,7 @@ function renderReviewStoreTable() {
 function renderReviewFeed() {
   const feed = document.getElementById('revFeedContainer');
   if (!feed) return;
+  window._sopReviewCache = [];
 
   let filtered = [...reviewRecentLogs];
   if (reviewFeedTab === 'negative') {
@@ -3990,18 +4374,26 @@ function renderReviewFeed() {
     const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
     const isNeg = r.is_negative || (r.rating_num <= 2);
     const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+    const cIdx = cacheSopReview(r);
+    const staff = detectStaffInText(r.review_text || '');
 
     return `
       <div class="${cardClass}" style="cursor:pointer;" onclick="openStoreReviewModal('${escapeAttr(r.store)}')">
-        <div class="review-card-header">
-          <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
-          <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+        <div>
+          <div class="review-card-header">
+            <span class="review-card-store"><i class="ti ti-building-store"></i> ${escapeHtml(r.store)}</span>
+            <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+            <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+            <span class="review-stars">${stars}</span>
+          </div>
+          <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
         </div>
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-          <span style="font-weight:600; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
-          <span class="review-stars">${stars}</span>
+        <div class="review-card-footer">
+          <span style="font-size:11px; color:var(--text-muted);">${staff ? `<i class="ti ti-award" style="color:var(--warning);"></i> ${escapeHtml(staff)}` : (isNeg ? 'Perlu respons Store Leader' : 'Ulasan positif')}</span>
+          <button type="button" class="sop-reply-btn" onclick="copySopReplyByCache(${cIdx}, event)"><i class="ti ti-copy"></i> Salin Draft Balasan</button>
         </div>
-        <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
       </div>
     `;
   }).join('');
@@ -4045,33 +4437,22 @@ function filterModalStoreReviews(tab) {
   const content = document.getElementById('storeReviewModalContent');
   if (!content) return;
 
-  // Filter waktu ulasan: buang ulasan yang sudah berbulan-bulan / bertahun-tahun lalu jika ingin lihat yang fresh
   let storeReviews = reviewRecentLogs.filter(r => r.store === currentModalStore);
 
-  // Sortir agar ulasan paling baru (hari / minggu lalu) selalu di paling atas
   storeReviews.sort((a, b) => {
     function getWeight(t) {
       if (!t) return 999;
       const str = t.toLowerCase();
       if (str.includes('hari') || str.includes('day') || str.includes('jam') || str.includes('hour') || str.includes('baru')) return 1;
-      if (str.includes('minggu') || str.includes('week')) {
-        const num = parseInt(str.match(/\d+/)?.[0] || '1', 10);
-        return 10 + num;
-      }
-      if (str.includes('bulan') || str.includes('month')) {
-        const num = parseInt(str.match(/\d+/)?.[0] || '1', 10);
-        return 100 + num;
-      }
+      if (str.includes('minggu') || str.includes('week')) return 10 + parseInt(str.match(/\d+/)?.[0] || '1', 10);
+      if (str.includes('bulan') || str.includes('month')) return 100 + parseInt(str.match(/\d+/)?.[0] || '1', 10);
       return 1000;
     }
     return getWeight(a.time_ago) - getWeight(b.time_ago);
   });
 
-  if (tab === 'neg') {
-    storeReviews = storeReviews.filter(r => r.is_negative || r.rating_num <= 2);
-  } else if (tab === 'pos') {
-    storeReviews = storeReviews.filter(r => r.rating_num >= 4);
-  }
+  if (tab === 'neg') storeReviews = storeReviews.filter(r => r.is_negative || r.rating_num <= 2);
+  else if (tab === 'pos') storeReviews = storeReviews.filter(r => r.rating_num >= 4);
 
   if (storeReviews.length === 0) {
     content.innerHTML = `<div style="text-align:center; padding:30px; color:var(--text-muted); font-size:13px;">Tidak ada ulasan pada kategori ini untuk toko ${escapeHtml(currentModalStore)}.</div>`;
@@ -4082,27 +4463,61 @@ function filterModalStoreReviews(tab) {
     const stars = '★'.repeat(r.rating_num || 5) + '☆'.repeat(Math.max(0, 5 - (r.rating_num || 5)));
     const isNeg = r.is_negative || (r.rating_num <= 2);
     const cardClass = isNeg ? 'review-card-item is-neg' : 'review-card-item is-pos';
+    const cIdx = cacheSopReview(r);
 
     return `
       <div class="${cardClass}">
-        <div class="review-card-header">
-          <span style="font-weight:700; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
-          <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+        <div>
+          <div class="review-card-header">
+            <span style="font-weight:700; font-size:13px;">${escapeHtml(r.author || 'Pelanggan')}</span>
+            <span class="review-card-meta">${escapeHtml(r.time_ago || '')}</span>
+          </div>
+          <div style="margin-bottom:6px;"><span class="review-stars">${stars}</span></div>
+          <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
         </div>
-        <div style="margin-bottom:6px;">
-          <span class="review-stars">${stars}</span>
+        <div class="review-card-footer">
+          <span style="font-size:11px; color:var(--text-muted);">SOP Google Bisnisku</span>
+          <button type="button" class="sop-reply-btn" onclick="copySopReplyByCache(${cIdx}, event)"><i class="ti ti-copy"></i> Salin Draft Balasan SOP</button>
         </div>
-        <div class="review-card-text">"${escapeHtml(r.review_text || '-')}"</div>
       </div>
     `;
   }).join('');
+}
+
+// 1-Klik Salin Briefing Laporan Mingguan ke WhatsApp
+function copyWeeklyBriefingWA(mode) {
+  const dateLabel = new Date().toLocaleDateString('id-ID', { dateStyle: 'medium' });
+  const totalReviews = reviewStoresList.reduce((acc, s) => acc + (s.total_reviews || 0), 0);
+  const avgRating = reviewStoresList.length ? (reviewStoresList.reduce((a, s) => a + parseFloat(s.avg_rating || 0), 0) / reviewStoresList.length).toFixed(2) : '-';
+  const topRevStores = [...reviewStoresList].sort((a, b) => (b.delta_this_week || 0) - (a.delta_this_week || 0)).slice(0, 3);
+  const negs = reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2);
+
+  const activeEros = (rows || []).filter(isActive).map(r => ({ ...r, total: calcTotal(r) })).sort((a, b) => b.total - a.total);
+  const avgEro = activeEros.length ? (activeEros.reduce((a, r) => a + r.total, 0) / activeEros.length).toFixed(2) : '-';
+  const top3Ero = activeEros.slice(0, 3);
+
+  let text = `📊 *BRIEFING PERFORMA BIG MALANG 2*\n_Update: ${dateLabel}_\n\n`;
+  if (mode !== 'reviews' && activeEros.length) {
+    text += `🏆 *POIN ERO (${activeEros.length} Aktif)*\n`;
+    text += `• Rata-rata Area: *${avgEro} pts*\n`;
+    text += `• Top 3 ERO: ${top3Ero.map((r, i) => `${i + 1}) ${r.name} (${r.total.toFixed(2)})`).join(' · ')}\n\n`;
+  }
+  if (reviewStoresList.length) {
+    text += `⭐ *GOOGLE REVIEW 15 TOKO*\n`;
+    text += `• Rata-rata Rating: *${avgRating} ★* (Total ${totalReviews.toLocaleString('id-ID')} ulasan)\n`;
+    text += `• Pertumbuhan Mingguan: *+${reviewWeeklySummary.thisWeek}* vs +${reviewWeeklySummary.lastWeek} week lalu\n`;
+    text += `• Top 3 Toko Tambah Review: ${topRevStores.map((s, i) => `${i + 1}) ${s.store} (+${s.delta_this_week || 0})`).join(' · ')}\n`;
+    text += `• Ulasan Negatif Baru: *${negs.length}* ${negs.length ? '(segera follow-up SL)' : '(Aman ✅)'}\n\n`;
+  }
+  text += `Semangat eksekusi & jaga kualitas pelayanan terbaik di seluruh toko!`;
+  copyToClipboardWithToast(text, 'Laporan Mingguan (format WA) berhasil disalin!');
 }
 
 // Copy Rekap Ulasan Negatif ke Clipboard untuk WhatsApp
 function copyNegativeReviewsSummary() {
   const negs = reviewRecentLogs.filter(r => r.is_negative || r.rating_num <= 2);
   if (negs.length === 0) {
-    alert('Tidak ada ulasan negatif terbaru.');
+    showAppToast('Tidak ada ulasan negatif terbaru saat ini.');
     return;
   }
 
@@ -4116,10 +4531,5 @@ function copyNegativeReviewsSummary() {
   });
 
   text += `Mohon Store Leader terkait untuk segera melakukan cross-check dan evaluasi pelayanan tim. Terima kasih! 🙏`;
-
-  navigator.clipboard.writeText(text).then(() => {
-    alert('✅ Rekap ulasan negatif berhasil disalin ke clipboard! Silakan paste langsung ke grup WhatsApp.');
-  }).catch(() => {
-    prompt('Salin teks rekap berikut:', text);
-  });
+  copyToClipboardWithToast(text, 'Rekap ulasan negatif berhasil disalin untuk WhatsApp!');
 }

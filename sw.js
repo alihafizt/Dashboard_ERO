@@ -1,5 +1,5 @@
 // Service worker Dashboard ERO — naikkan CACHE_VERSION setiap kali file diubah
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = 'dashboard-ero-' + CACHE_VERSION;
 const CORE_FILES = ['./', 'index.html', 'style.css', 'app.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 

@@ -4,17 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Big Malang 2 — Point Dashboard</title>
-<meta name="theme-color" content="#F5B400">
+<meta name="theme-color" content="#1D4ED8">
 <meta name="description" content="Big Malang 2 — dashboard poin dan peringkat ERO.">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/2.44.0/iconfont/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <link rel="stylesheet" href="style.css">
 </head>
 <body class="gated">
@@ -37,13 +38,15 @@
   <aside class="app-sidebar" id="appSidebar">
     <div class="sidebar-brand"><svg class="nav-icon brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v4a4 4 0 0 1-8 0V4z"/><path d="M8 5H5a3 3 0 0 0 3 3"/><path d="M16 5h3a3 3 0 0 1-3 3"/><path d="M12 12v3"/><path d="M9 19h6"/><path d="M10 16h4l.5 3h-5z"/></svg><span class="brand-text">Big Malang 2</span></div>
     <nav>
+      <div class="nav-group-label">Operasional Harian</div>
       <button class="nav-item active" data-view="dashboard" onclick="switchView('dashboard')" title="Dashboard"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/></svg><span class="nav-label">Dashboard</span></button>
       <button class="nav-item" data-view="eros" onclick="switchView('eros')" title="Data ERO"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3.3 20c0-3.3 2.5-5.7 5.7-5.7s5.7 2.4 5.7 5.7"/><circle cx="17.2" cy="8.6" r="2.3"/><path d="M15.7 14.4c2.3.4 4 2.3 4 4.7"/></svg><span class="nav-label">Data ERO</span></button>
       <button class="nav-item" data-view="stores" onclick="switchView('stores')" title="Data Toko"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.5l1.2-4.5h13.6L20 9.5"/><path d="M4.5 9.5V20h15V9.5"/><path d="M9.3 20v-5.3h5.4V20"/><path d="M4 9.5h16"/></svg><span class="nav-label">Data Toko</span></button>
-      <button class="nav-item" data-view="reports" onclick="switchView('reports')" title="Report"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="1.5"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg><span class="nav-label">Report</span></button>
+      <div class="nav-group-label">Analitik &amp; Reputasi</div>
+      <button class="nav-item" data-view="reviews" onclick="switchView('reviews')" title="Google Review"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="nav-label">Google Review</span><span id="sidebarNegReviewBadge" class="nav-pill-neg" style="display:none;"></span></button>
       <button class="nav-item" data-view="compare" onclick="switchView('compare')" title="Analisis Progres"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-5"/></svg><span class="nav-label">Analisis</span></button>
+      <button class="nav-item" data-view="reports" onclick="switchView('reports')" title="Report"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5.5" y="3" width="13" height="18" rx="1.5"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg><span class="nav-label">Report</span></button>
       <button class="nav-item" data-view="monthly" onclick="switchView('monthly')" title="Arsip Bulanan"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20.5" x2="20" y2="20.5"/><rect x="6" y="10.5" width="3.6" height="9.5"/><rect x="14.4" y="5.5" width="3.6" height="14.5"/></svg><span class="nav-label">Arsip</span></button>
-      <button class="nav-item" data-view="reviews" onclick="switchView('reviews')" title="Google Review"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span class="nav-label">Google Review</span></button>
       <button class="nav-item" data-view="settings" id="navSettings" style="display:none;" onclick="switchView('settings')" title="Kelola Data"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M4.6 4.6l2.1 2.1M17.3 17.3l2.1 2.1M2.5 12h3M18.5 12h3M4.6 19.4l2.1-2.1M17.3 6.7l2.1-2.1"/></svg><span class="nav-label">Kelola Data</span><span id="snapshotNavBadge" class="snapshot-nav-badge" style="display:none;" title="Snapshot hari ini belum disimpan"></span></button>
     </nav>
     <button class="sidebar-toggle" id="sidebarToggleBtn" onclick="toggleSidebar()" title="Ciutkan menu">
@@ -57,10 +60,11 @@
   <div class="hero">
     <div class="hero-left">
       <h1><i class="ti ti-trophy"></i>Big Malang 2</h1>
-      <div class="sub">Point Dashboard — Daily Top & Bottom, update terpusat.</div>
+      <div class="sub">Area Ops Command Center — performa ERO, 15 toko &amp; reputasi Google Maps.</div>
     </div>
     <div class="hero-right">
       <span class="mode-badge" id="modeBadge"></span>
+      <button onclick="copyWeeklyBriefingWA()" title="Salin ringkasan briefing harian/mingguan untuk grup WhatsApp"><i class="ti ti-brand-whatsapp" style="color:var(--success);"></i><span>Briefing WA</span></button>
       <button id="themeToggle" onclick="toggleTheme()" title="Ganti Tema" style="border-radius: 50%; padding: 8px 10px;">
         <svg id="themeIconMoon" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <svg id="themeIconSun" class="theme-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -408,6 +412,21 @@
       </div>
 
       <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:10px;">
+          <div>
+            <h2><i class="ti ti-chart-dots-3"></i>Store Health Matrix (Poin ERO vs Rating Google Maps)</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:13px;">Memetakan posisi 15 toko: Sumbu X = Rata-rata Poin ERO, Sumbu Y = Rating Google Review. Klik titik toko untuk detail.</div>
+          </div>
+          <div class="matrix-legend-pills">
+            <span class="mx-pill ok">Bintang Juara (Poin ≥ 8.0 &amp; ★ ≥ 4.7)</span>
+            <span class="mx-pill warn">Layanan Rawan</span>
+            <span class="mx-pill bad">Fokus Pembinaan</span>
+          </div>
+        </div>
+        <div id="storeHealthMatrixWrap" class="chart-canvas-box" style="height:300px;"><canvas id="storeHealthMatrixCanvas"></canvas></div>
+      </div>
+
+      <div class="panel">
         <h2><i class="ti ti-building-store"></i>Ringkasan per Store</h2>
         <div class="sub" style="color:var(--text-muted); font-size:13px; margin-bottom:16px;">Diurutkan dari rata-rata poin terendah — toko yang paling perlu dibantu tampil paling atas. Target Store = akumulasi target seluruh ERO aktif di store. Klik nama toko untuk melihat detail target, pencapaian, dan ERO.</div>
         <div class="table-scroll" style="max-height: 450px;">
@@ -479,81 +498,117 @@
       </div>
     </div>
 
-    <!-- 1. Peringkat Toko Berdasarkan Rating (TETAP DI ATAS) -->
-    <div class="panel" style="margin-top:20px;">
-      <div class="panel-head-row" style="flex-wrap:wrap; gap:12px;">
-        <div>
-          <h2><i class="ti ti-star"></i>Performa Google Review 15 Toko</h2>
-          <div class="sub" style="color:var(--text-muted); font-size:12px;">Klik nama toko untuk melihat ulasan positif & negatif lengkap</div>
+    <!-- Charts Row (Google Reviews) -->
+    <div class="rev-charts-grid" style="margin-top:16px;">
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:8px;">
+          <div>
+            <h2><i class="ti ti-chart-bar"></i>Pertumbuhan Ulasan (+Week Ini vs +Week Lalu)</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:12px;">Perbandingan kecepatan penambahan review antar toko</div>
+          </div>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button class="export-share-btn" id="btnFilterNeedsAttention" onclick="toggleStoreAttentionFilter()"><i class="ti ti-alert-circle"></i> Perlu Perhatian Saja</button>
-          <button class="export-share-btn" onclick="copyNegativeReviewsSummary()"><i class="ti ti-copy"></i> Salin Rekap Negatif (WA)</button>
-        </div>
+        <div id="revVelocityChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revVelocityCanvas"></canvas></div>
       </div>
-      <div class="table-scroll" style="margin-top:12px;">
-        <table class="store-summary-table">
-          <thead>
-            <tr>
-              <th style="width:50px;">Rank</th>
-              <th class="name">Nama Toko</th>
-              <th>Rating Rata-rata</th>
-              <th>Total Review</th>
-              <th>+ Week Ini</th>
-              <th>+ Week Lalu</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="revStoreTableBody">
-            <tr><td colspan="7" style="text-align:center; padding:20px;">Memuat data ulasan...</td></tr>
-          </tbody>
-        </table>
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:8px;">
+          <div>
+            <h2><i class="ti ti-chart-donut-3"></i>Sebaran Sentimen Area</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:12px;">Proporsi ulasan terbaru berdasarkan bintang</div>
+          </div>
+        </div>
+        <div id="revSentimentChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revSentimentCanvas"></canvas></div>
       </div>
     </div>
 
-    <!-- 2. Dua Insight Panels: Staff of The Week & Root-Cause Analysis (DI BAWAH TABEL) -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 20px;">
-      
-      <!-- Panel 1: Staff of the Week (Paling Sering Dipuji) -->
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2><i class="ti ti-trophy" style="color:#F59E0B;"></i>Top Staff of the Week</h2>
-          <span class="badge" style="background:rgba(245,158,11,0.1); color:#F59E0B; font-size:11px;">Apresiasi Tim</span>
+    <!-- Split Bento Grid: Tabel 15 Toko (8 Cols) + Insight Staff & Root Cause (4 Cols) -->
+    <div class="rev-bento-split" style="margin-top:16px;">
+      <!-- Left 8 Cols: Peringkat Toko Berdasarkan Rating -->
+      <div class="panel rev-bento-main">
+        <div class="panel-head-row" style="flex-wrap:wrap; gap:10px;">
+          <div>
+            <h2><i class="ti ti-star"></i>Performa Google Review 15 Toko</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:12px;">Klik nama toko untuk melihat ulasan &amp; menyalin draft balasan SOP</div>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <label class="rev-target-control" title="Ubah target review mingguan per toko">
+              <span>Target/mgg</span>
+              <input id="revWeeklyTargetInput" type="number" min="1" max="50" value="5" onchange="updateReviewWeeklyTarget(this.value)">
+            </label>
+            <button class="export-share-btn" onclick="copyWeeklyBriefingWA('reviews')"><i class="ti ti-brand-whatsapp"></i> Laporan Mingguan (WA)</button>
+            <button class="export-share-btn" id="btnFilterNeedsAttention" onclick="toggleStoreAttentionFilter()"><i class="ti ti-alert-circle"></i> Perlu Perhatian Saja</button>
+            <button class="export-share-btn" onclick="copyNegativeReviewsSummary()"><i class="ti ti-copy"></i> Rekap Negatif (WA)</button>
+          </div>
         </div>
-        <div class="sub" style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">Klik nama staf untuk melihat ulasan asli dari pelanggan.</div>
-        <div id="staffLeaderboardContainer">
-          <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Menganalisis sebutan nama staf...</div>
+        <div class="rev-filter-strip">
+          <div class="rev-cluster-pills" id="revClusterPills">
+            <button type="button" class="rev-pill active" data-cluster="all" onclick="setReviewClusterFilter('all')">Semua (15)</button>
+            <button type="button" class="rev-pill" data-cluster="mall" onclick="setReviewClusterFilter('mall')">Mall Stores</button>
+            <button type="button" class="rev-pill" data-cluster="street" onclick="setReviewClusterFilter('street')">Street Stores</button>
+            <button type="button" class="rev-pill" data-cluster="malang" onclick="setReviewClusterFilter('malang')">Malang</button>
+            <button type="button" class="rev-pill" data-cluster="blitar" onclick="setReviewClusterFilter('blitar')">Blitar</button>
+          </div>
+          <input type="search" id="revStoreSearch" class="rev-store-search" placeholder="Cari toko..." oninput="renderReviewStoreTable()" aria-label="Cari toko di tabel review">
+        </div>
+        <div class="table-scroll" style="margin-top:10px;">
+          <table class="store-summary-table">
+            <thead>
+              <tr>
+                <th style="width:46px;">Rank</th>
+                <th class="name">Nama Toko</th>
+                <th>Rating</th>
+                <th>Total</th>
+                <th>+ Week Ini (Target)</th>
+                <th>+ Week Lalu</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="revStoreTableBody">
+              <tr><td colspan="7" style="text-align:center; padding:20px;">Memuat data ulasan...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Panel 2: Root Cause Analysis Komplain -->
-      <div class="panel">
-        <div class="panel-head-row">
-          <h2><i class="ti ti-chart-pie" style="color:#EF4444;"></i>Analisis Akar Masalah Komplain</h2>
-          <span class="badge" style="background:rgba(239,68,68,0.1); color:#EF4444; font-size:11px;">Evaluasi Toko</span>
+      <!-- Right 4 Cols: Top Staff & Root Cause Analysis Side by Side -->
+      <div class="rev-bento-side">
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2><i class="ti ti-trophy"></i>Top Staff of the Week</h2>
+            <span class="badge rev-badge-warn">Apresiasi Tim</span>
+          </div>
+          <div class="sub" style="color:var(--text-muted); font-size:12px; margin-bottom:10px;">Klik nama staf untuk melihat ulasan asli pelanggan.</div>
+          <div id="staffLeaderboardContainer">
+            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Menganalisis sebutan nama staf...</div>
+          </div>
         </div>
-        <div class="sub" style="color:var(--text-muted); font-size:12px; margin-bottom:12px;">Klik kategori untuk melihat daftar toko & komplain terkait.</div>
-        <div id="rootCauseContainer">
-          <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Menganalisis kategori keluhan...</div>
+
+        <div class="panel">
+          <div class="panel-head-row">
+            <h2><i class="ti ti-chart-pie"></i>Akar Masalah Komplain</h2>
+            <span class="badge rev-badge-danger">Evaluasi Toko</span>
+          </div>
+          <div class="sub" style="color:var(--text-muted); font-size:12px; margin-bottom:10px;">Klik kategori untuk melihat daftar keluhan terkait.</div>
+          <div id="rootCauseContainer">
+            <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Menganalisis kategori keluhan...</div>
+          </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Feed Ulasan Terbaru -->
-    <div class="panel" style="margin-top:20px;">
+    <!-- Feed Ulasan Terbaru (2-Column Grid) -->
+    <div class="panel" style="margin-top:16px;">
       <div class="panel-head-row" style="flex-wrap:wrap; gap:12px; margin-bottom:12px;">
         <div>
-          <h2><i class="ti ti-message-2"></i>Ulasan Pelanggan</h2>
-          <div class="sub" style="color:var(--text-muted); font-size:13px;">Ulasan baru yang ditarik dari seluruh store.</div>
+          <h2><i class="ti ti-message-2"></i>Ulasan Pelanggan &amp; Draft Balasan SOP</h2>
+          <div class="sub" style="color:var(--text-muted); font-size:13px;">Klik tombol salin untuk menyiapkan balasan SOP Google Bisnisku dalam 1 klik.</div>
         </div>
         <div class="compare-mode-tabs" style="margin-top:0;">
           <button class="cmp-tab active" id="tabFeedAll" onclick="setReviewFeedTab('all')">Semua Ulasan</button>
-          <button class="cmp-tab" id="tabFeedNeg" onclick="setReviewFeedTab('negative')"><span style="color:#EF4444;">👎 Negatif Saja (★1-2)</span></button>
-          <button class="cmp-tab" id="tabFeedPos" onclick="setReviewFeedTab('positive')"><span style="color:#10B981;">👍 Positif (★5)</span></button>
+          <button class="cmp-tab" id="tabFeedNeg" onclick="setReviewFeedTab('negative')"><i class="ti ti-thumb-down" style="color:var(--danger);"></i> Negatif (★1-2)</button>
+          <button class="cmp-tab" id="tabFeedPos" onclick="setReviewFeedTab('positive')"><i class="ti ti-thumb-up" style="color:var(--success);"></i> Positif (★5)</button>
         </div>
       </div>
-      <div id="revFeedContainer" class="review-feed-list">
+      <div id="revFeedContainer" class="review-feed-list review-feed-grid">
         <div style="text-align:center; padding:20px; color:var(--text-muted);">Memuat ulasan...</div>
       </div>
     </div>
@@ -605,8 +660,8 @@
     </div>
     <div class="compare-mode-tabs" style="margin-top:10px; margin-bottom:12px;">
       <button class="cmp-tab active" id="modalTabAll" onclick="filterModalStoreReviews('all')">Semua Ulasan</button>
-      <button class="cmp-tab" id="modalTabNeg" onclick="filterModalStoreReviews('neg')"><span style="color:#EF4444;">👎 Negatif (★1-2)</span></button>
-      <button class="cmp-tab" id="modalTabPos" onclick="filterModalStoreReviews('pos')"><span style="color:#10B981;">👍 Positif (★4-5)</span></button>
+      <button class="cmp-tab" id="modalTabNeg" onclick="filterModalStoreReviews('neg')"><i class="ti ti-thumb-down" style="color:var(--danger);"></i> Negatif (★1-2)</button>
+      <button class="cmp-tab" id="modalTabPos" onclick="filterModalStoreReviews('pos')"><i class="ti ti-thumb-up" style="color:var(--success);"></i> Positif (★4-5)</button>
     </div>
     <div id="storeReviewModalContent" class="review-feed-list" style="overflow-y:auto; flex:1; padding-right:4px;">
       <!-- Card list -->
@@ -630,6 +685,7 @@
   </div>
 </div>
 
+<div id="appToast" class="app-toast" role="status" aria-live="polite"></div>
 <script src="app.js"></script>
 </body>
 </html>
