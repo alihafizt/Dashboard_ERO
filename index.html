@@ -469,7 +469,8 @@
 
   <!-- GOOGLE REVIEWS VIEW -->
   <div class="view-section" data-view-section="reviews">
-    <!-- KPI Overview -->
+    <div id="revReportCaptureArea" class="rev-capture-wrap">
+    <!-- KPI Overview (Langsung di atas tabel untuk 1x screenshot) -->
     <div class="review-kpi-grid">
       <div class="panel review-kpi-card">
         <div class="kpi-lbl">Total Ulasan (15 Toko)</div>
@@ -498,30 +499,8 @@
       </div>
     </div>
 
-    <!-- Charts Row (Google Reviews) -->
-    <div class="rev-charts-grid" style="margin-top:16px;">
-      <div class="panel">
-        <div class="panel-head-row" style="margin-bottom:8px;">
-          <div>
-            <h2><i class="ti ti-chart-bar"></i>Pertumbuhan Ulasan (+Week Ini vs +Week Lalu)</h2>
-            <div class="sub" style="color:var(--text-muted); font-size:12px;">Perbandingan kecepatan penambahan review antar toko</div>
-          </div>
-        </div>
-        <div id="revVelocityChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revVelocityCanvas"></canvas></div>
-      </div>
-      <div class="panel">
-        <div class="panel-head-row" style="margin-bottom:8px;">
-          <div>
-            <h2><i class="ti ti-chart-donut-3"></i>Sebaran Sentimen Area</h2>
-            <div class="sub" style="color:var(--text-muted); font-size:12px;">Proporsi ulasan terbaru berdasarkan bintang</div>
-          </div>
-        </div>
-        <div id="revSentimentChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revSentimentCanvas"></canvas></div>
-      </div>
-    </div>
-
     <!-- Split Bento Grid: Tabel 15 Toko (8 Cols) + Insight Staff & Root Cause (4 Cols) -->
-    <div class="rev-bento-split" style="margin-top:16px;">
+    <div class="rev-bento-split" style="margin-top:12px;">
       <!-- Left 8 Cols: Peringkat Toko Berdasarkan Rating -->
       <div class="panel rev-bento-main">
         <div class="panel-head-row" style="flex-wrap:wrap; gap:10px;">
@@ -534,6 +513,7 @@
               <span>Target/mgg</span>
               <input id="revWeeklyTargetInput" type="number" min="1" max="50" value="5" onchange="updateReviewWeeklyTarget(this.value)">
             </label>
+            <button class="export-share-btn" onclick="exportReviewReportImage()" title="Download / Share gambar KPI + 15 Toko sekaligus"><i class="ti ti-camera"></i> Export PNG</button>
             <button class="export-share-btn" onclick="copyWeeklyBriefingWA('reviews')"><i class="ti ti-brand-whatsapp"></i> Laporan Mingguan (WA)</button>
             <button class="export-share-btn" id="btnFilterNeedsAttention" onclick="toggleStoreAttentionFilter()"><i class="ti ti-alert-circle"></i> Perlu Perhatian Saja</button>
             <button class="export-share-btn" onclick="copyNegativeReviewsSummary()"><i class="ti ti-copy"></i> Rekap Negatif (WA)</button>
@@ -549,11 +529,11 @@
           </div>
           <input type="search" id="revStoreSearch" class="rev-store-search" placeholder="Cari toko..." oninput="renderReviewStoreTable()" aria-label="Cari toko di tabel review">
         </div>
-        <div class="table-scroll" style="margin-top:10px;">
+        <div class="table-scroll rev-table-full" style="margin-top:10px;">
           <table class="store-summary-table">
             <thead>
               <tr>
-                <th style="width:46px;">Rank</th>
+                <th style="width:42px;">Rank</th>
                 <th class="name">Nama Toko</th>
                 <th>Rating</th>
                 <th>Total</th>
@@ -592,6 +572,29 @@
             <div style="text-align:center; padding:16px; color:var(--text-muted); font-size:12px;">Menganalisis kategori keluhan...</div>
           </div>
         </div>
+      </div>
+    </div>
+    </div>
+
+    <!-- Charts Row (Google Reviews — di bawah tabel agar KPI + Tabel bisa 1x screenshot) -->
+    <div class="rev-charts-grid" style="margin-top:16px;">
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:8px;">
+          <div>
+            <h2><i class="ti ti-chart-bar"></i>Pertumbuhan Ulasan (+Week Ini vs +Week Lalu)</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:12px;">Perbandingan kecepatan penambahan review antar toko</div>
+          </div>
+        </div>
+        <div id="revVelocityChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revVelocityCanvas"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head-row" style="margin-bottom:8px;">
+          <div>
+            <h2><i class="ti ti-chart-donut-3"></i>Sebaran Sentimen Area</h2>
+            <div class="sub" style="color:var(--text-muted); font-size:12px;">Proporsi ulasan terbaru berdasarkan bintang</div>
+          </div>
+        </div>
+        <div id="revSentimentChartWrap" class="chart-canvas-box" style="height:220px;"><canvas id="revSentimentCanvas"></canvas></div>
       </div>
     </div>
 

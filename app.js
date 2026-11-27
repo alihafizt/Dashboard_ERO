@@ -4343,7 +4343,7 @@ function renderReviewStoreTable() {
           <b style="color:var(--brand);">${escapeHtml(s.store)}</b>
           <span style="font-size:11px; color:var(--text-muted); margin-left:6px;"><i class="ti ti-external-link"></i> lihat ulasan</span>
         </td>
-        <td><b style="color:#D97706;">★ ${rating}</b></td>
+        <td><b class="rev-rating-cell" style="color:#D97706;">★ ${rating}</b></td>
         <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
         <td>${targetCell}</td>
         <td>${lastWText}</td>
@@ -4482,6 +4482,42 @@ function filterModalStoreReviews(tab) {
       </div>
     `;
   }).join('');
+}
+
+// Export / Share Screenshot 1x (KPI + Tabel 15 Toko sekaligus)
+async function exportReviewReportImage() {
+  const area = document.getElementById('revReportCaptureArea');
+  if (!area || typeof html2canvas === 'undefined') {
+    showAppToast('Fitur export gambar belum tersedia di browser ini.', true);
+    return;
+  }
+  showAppToast('Menyiapkan gambar KPI & 15 Toko...');
+  const prep = typeof shotPrepStyle === 'function' ? shotPrepStyle() : null;
+  try {
+    const bg = getComputedStyle(document.body).backgroundColor || '#F1F5F9';
+    const canvas = await html2canvas(area, { scale: 2, backgroundColor: bg, useCORS: true });
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `GoogleReview-BigMalang2-${dateStr}.png`;
+    if (blob && navigator.share && navigator.canShare) {
+      const file = new File([blob], filename, { type: 'image/png' });
+      if (navigator.canShare({ files: [file] })) {
+        await navigator.share({ title: `Google Review Big Malang 2 (${dateStr})`, files: [file] });
+        return;
+      }
+    }
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    showAppToast(`Gambar ${filename} berhasil diunduh!`);
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    console.error(err);
+    showAppToast('Gagal membuat gambar PNG.', true);
+  } finally {
+    if (prep) prep.remove();
+  }
 }
 
 // 1-Klik Salin Briefing Laporan Mingguan ke WhatsApp

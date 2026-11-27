@@ -3141,3 +3141,28 @@ input:focus, select:focus, textarea:focus {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Single-Screenshot Capture Ergonomics (Google Review KPI + Full 15 Store Rows) */
+.rev-capture-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rev-capture-wrap .review-kpi-grid {
+  margin-bottom: 0 !important;
+  gap: 12px;
+}
+.rev-capture-wrap .review-kpi-card {
+  padding: 13px 16px;
+}
+.rev-table-full {
+  max-height: none !important;
+  overflow-y: visible !important;
+}
+.rev-bento-main .store-summary-table th,
+.rev-bento-main .store-summary-table td {
+  padding: 7px 10px;
+}
+.rev-rating-cell {
+  white-space: nowrap;
+}
