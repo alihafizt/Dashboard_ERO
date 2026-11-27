@@ -2542,17 +2542,7 @@ function achGridHtml(agg){
   }).join('')}</div>`;
 }
 
-// ---- Urutan menu: Dashboard, Data Toko, Data ERO, Analisis, Report, Arsip, Kelola Data ----
-function reorderNav(){
-  const items=[...document.querySelectorAll('.nav-item[data-view]')];
-  if(!items.length) return;
-  const parent=items[0].parentElement;
-  ['dashboard','stores','eros','compare','reports','monthly','settings'].forEach(v=>{
-    const el=parent.querySelector(`.nav-item[data-view="${v}"]`);
-    if(el) parent.appendChild(el);
-  });
-}
-reorderNav();
+// ---- Urutan menu diatur langsung di index.html agar sesuai group Operasional Harian & Analitik & Reputasi ----
 
 // ---- Data ERO: satu area "Perhatian" dengan dua tab (Capaian per kategori / Tren menurun) ----
 let perhatianTab='cat';
@@ -3562,7 +3552,27 @@ async function loadReviewDashboardData() {
       const prev = history[1]; // data tarikan sebelumnya
 
       const deltaReviews = prev ? (latest.total_reviews - prev.total_reviews) : (latest.delta_reviews || 0);
-      const deltaRating = prev ? (parseFloat(latest.avg_rating) - parseFloat(prev.avg_rating)) : 0;
+      const latestRatingNum = parseFloat(latest.avg_rating);
+      const prevRatingNum = prev ? parseFloat(prev.avg_rating) : null;
+      const deltaRating = prev ? Number((latestRatingNum - prevRatingNum).toFixed(2)) : 0;
+
+      // Telusuri riwayat perubahan rating (dari paling lama ke paling baru)
+      const chrono = [...history].reverse();
+      const ratingChanges = [];
+      for (let i = 1; i < chrono.length; i++) {
+        const prevVal = parseFloat(chrono[i - 1].avg_rating);
+        const curVal = parseFloat(chrono[i].avg_rating);
+        const diff = Number((curVal - prevVal).toFixed(2));
+        if (Math.abs(diff) >= 0.01) {
+          ratingChanges.push({
+            from: prevVal,
+            to: curVal,
+            diff,
+            at: chrono[i].scraped_at,
+            reviews: chrono[i].total_reviews
+          });
+        }
+      }
 
       // Hitung delta minggu ini (dari awal Senin minggu ini s/d sekarang)
       // cari record tertua di minggu ini dan record sebelum minggu ini
@@ -3600,6 +3610,12 @@ async function loadReviewDashboardData() {
         ...latest,
         delta_reviews: deltaReviews,
         delta_rating: deltaRating,
+        prev_avg_rating: prevRatingNum,
+        prev_total_reviews: prev ? prev.total_reviews : null,
+        prev_scraped_at: prev ? prev.scraped_at : null,
+        first_scraped_at: chrono[0] ? chrono[0].scraped_at : latest.scraped_at,
+        history_count: history.length,
+        rating_changes: ratingChanges.reverse(), // terbaru di depan
         delta_this_week: storeDeltaThisWeek,
         delta_last_week: storeDeltaLastWeek
       };
@@ -4307,7 +4323,12 @@ function renderReviewStoreTable() {
   }
 
   tbody.innerHTML = list.map((s, idx) => {
-    const rating = parseFloat(s.avg_rating || 0).toFixed(1);
+    const ratingNum = parseFloat(s.avg_rating || 0);
+    const rating = ratingNum.toFixed(1);
+    const dRat = Number(s.delta_rating || 0);
+    const ratingDeltaTag = Math.abs(dRat) >= 0.01
+      ? `<span class="rev-rating-delta ${dRat > 0 ? 'up' : 'down'}" title="Berubah dari ${Number(s.prev_avg_rating ?? ratingNum).toFixed(1)} menjadi ${rating}">${dRat > 0 ? '▲' : '▼'} ${dRat > 0 ? '+' : ''}${dRat.toFixed(1)}</span>`
+      : '';
     const thisW = s.delta_this_week || 0;
     const lastW = s.delta_last_week || 0;
     const pct = Math.min(100, Math.round((thisW / reviewWeeklyTarget) * 100));
@@ -4343,7 +4364,7 @@ function renderReviewStoreTable() {
           <b style="color:var(--brand);">${escapeHtml(s.store)}</b>
           <span style="font-size:11px; color:var(--text-muted); margin-left:6px;"><i class="ti ti-external-link"></i> lihat ulasan</span>
         </td>
-        <td><b class="rev-rating-cell" style="color:#D97706;">★ ${rating}</b></td>
+        <td><b class="rev-rating-cell" style="color:#D97706;">★ ${rating}</b>${ratingDeltaTag}</td>
         <td>${(s.total_reviews || 0).toLocaleString('id-ID')}</td>
         <td>${targetCell}</td>
         <td>${lastWText}</td>
@@ -4402,6 +4423,108 @@ function renderReviewFeed() {
 // =========================================================
 // MODAL REVIEW PER TOKO
 // =========================================================
+function formatReviewShortDate(iso) {
+  if (!iso) return '-';
+  try {
+    return new Date(iso).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch {
+    return '-';
+  }
+}
+
+function renderStoreReviewSummary(storeName, storeData) {
+  const host = document.getElementById('storeReviewSummary');
+  if (!host) return;
+  if (!storeData) {
+    host.innerHTML = '';
+    return;
+  }
+
+  const curRating = parseFloat(storeData.avg_rating || 0);
+  const curStr = curRating.toFixed(1);
+  const prevRating = storeData.prev_avg_rating !== null && storeData.prev_avg_rating !== undefined
+    ? parseFloat(storeData.prev_avg_rating)
+    : null;
+  const deltaRating = Number(storeData.delta_rating || 0);
+  const changes = Array.isArray(storeData.rating_changes) ? storeData.rating_changes : [];
+
+  let ratingChangeHtml = `<span class="srs-pill flat">Tarikan perdana</span>`;
+  if (prevRating !== null) {
+    const prevStr = prevRating.toFixed(1);
+    if (deltaRating >= 0.01) {
+      ratingChangeHtml = `<span class="srs-pill up"><i class="ti ti-trending-up"></i> Naik +${deltaRating.toFixed(1)} (${prevStr} → ${curStr})</span>`;
+    } else if (deltaRating <= -0.01) {
+      ratingChangeHtml = `<span class="srs-pill down"><i class="ti ti-trending-down"></i> Turun ${deltaRating.toFixed(1)} (${prevStr} → ${curStr})</span>`;
+    } else {
+      ratingChangeHtml = `<span class="srs-pill flat">= Stabil (${prevStr} → ${curStr})</span>`;
+    }
+  }
+
+  const lastPrevNote = (Math.abs(deltaRating) < 0.01 && changes.length > 0)
+    ? `<div class="srs-note">Perubahan terakhir: <b>${changes[0].from.toFixed(1)} → ${changes[0].to.toFixed(1)}</b> (${formatReviewShortDate(changes[0].at)})</div>`
+    : (storeData.prev_scraped_at
+      ? `<div class="srs-note">Vs tarikan ${formatReviewShortDate(storeData.prev_scraped_at)}</div>`
+      : '');
+
+  const thisW = storeData.delta_this_week || 0;
+  const lastW = storeData.delta_last_week || 0;
+  const dRev = Number(storeData.delta_reviews || 0);
+  const pct = Math.min(100, Math.round((thisW / reviewWeeklyTarget) * 100));
+
+  const storeLogs = reviewRecentLogs.filter(r => r.store === storeName);
+  const negCount = storeLogs.filter(r => r.is_negative || r.rating_num <= 2).length;
+  const posCount = storeLogs.filter(r => r.rating_num >= 4).length;
+
+  let historyStripHtml = '';
+  if (changes.length > 0) {
+    const chips = changes.slice(0, 6).map(ch => {
+      const cls = ch.diff > 0 ? 'up' : 'down';
+      const arrow = ch.diff > 0 ? '▲' : '▼';
+      const sign = ch.diff > 0 ? '+' : '';
+      return `<span class="srs-hist-chip ${cls}">${formatReviewShortDate(ch.at)}: ${ch.from.toFixed(1)} → ${ch.to.toFixed(1)} (${arrow} ${sign}${ch.diff.toFixed(1)})</span>`;
+    }).join('');
+    historyStripHtml = `
+      <div class="srs-history">
+        <span class="srs-history-lbl"><i class="ti ti-history"></i> Riwayat Perubahan Rating:</span>
+        <div class="srs-history-chips">${chips}</div>
+      </div>`;
+  } else if ((storeData.history_count || 0) > 1) {
+    historyStripHtml = `
+      <div class="srs-history">
+        <span class="srs-history-lbl"><i class="ti ti-history"></i> Riwayat Rating:</span>
+        <span class="srs-note" style="margin-top:0;">Stabil di <b>★ ${curStr}</b> selama ${storeData.history_count}x pemantauan (sejak ${formatReviewShortDate(storeData.first_scraped_at)}).</span>
+      </div>`;
+  } else {
+    historyStripHtml = `
+      <div class="srs-history">
+        <span class="srs-history-lbl"><i class="ti ti-history"></i> Riwayat Rating:</span>
+        <span class="srs-note" style="margin-top:0;">Baru 1x tarikan data (★ ${curStr}). Perubahan nilai rating akan tercatat pada tarikan berikutnya.</span>
+      </div>`;
+  }
+
+  host.innerHTML = `
+    <div class="srs-grid">
+      <div class="srs-card">
+        <div class="srs-lbl">Rating &amp; Perubahan</div>
+        <div class="srs-val"><span style="color:#D97706;">★ ${curStr}</span></div>
+        <div style="margin-top:4px;">${ratingChangeHtml}</div>
+        ${lastPrevNote}
+      </div>
+      <div class="srs-card">
+        <div class="srs-lbl">Total &amp; Pertumbuhan Ulasan</div>
+        <div class="srs-val">${(storeData.total_reviews || 0).toLocaleString('id-ID')} <small>ulasan</small></div>
+        <div class="srs-note">Tarikan terakhir: <b>${dRev >= 0 ? '+' : ''}${dRev}</b> · Week ini: <b>+${thisW}</b> · Lalu: <b>+${lastW}</b></div>
+      </div>
+      <div class="srs-card">
+        <div class="srs-lbl">Target/Mgg &amp; Ulasan Terekam</div>
+        <div class="srs-val">+${thisW}/${reviewWeeklyTarget} <small>(${pct}%)</small></div>
+        <div class="srs-note">${storeLogs.length} terekam: <span style="color:var(--success);font-weight:600;">${posCount} ★4-5</span> · <span style="color:${negCount > 0 ? 'var(--danger)' : 'var(--text-muted)'};font-weight:600;">${negCount} ★1-2</span></div>
+      </div>
+    </div>
+    ${historyStripHtml}
+  `;
+}
+
 function openStoreReviewModal(storeName) {
   currentModalStore = storeName;
   currentModalTab = 'all';
@@ -4416,6 +4539,7 @@ function openStoreReviewModal(storeName) {
   if (title) title.innerHTML = `<i class="ti ti-building-store"></i> ${escapeHtml(storeName)}`;
   if (sub) sub.textContent = `Ringkasan Ulasan Google Maps · ${rating}`;
 
+  renderStoreReviewSummary(storeName, storeData);
   filterModalStoreReviews('all');
   if (modal) modal.style.display = 'flex';
 }
